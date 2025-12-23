@@ -1,0 +1,7 @@
+# EAS Build ignore
+node_modules/
+.git/
+.expo/
+.vscode/
+*.log
+.DS_Store
