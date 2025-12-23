@@ -1,6 +1,15 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Teacher, Student, Lesson, Payment, Group, AttendanceItem } from '../types';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
+import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import i18n from '../i18n/config';
 import { StorageService } from '../services/storage';
+import { AttendanceItem, Group, Lesson, Payment, Student, Teacher } from '../types';
+
+interface AppSettings {
+  currency: '$' | '€' | '₺' | '£';
+  instructionCategory: string;
+  language: string;
+}
 
 interface DataContextType {
   teacher: Teacher | null;
@@ -8,6 +17,7 @@ interface DataContextType {
   lessons: Lesson[];
   payments: Payment[];
   groups: Group[];
+  settings: AppSettings;
   loading: boolean;
   setTeacher: (teacher: Teacher) => Promise<void>;
   addStudent: (student: Student) => Promise<void>;
@@ -18,6 +28,7 @@ interface DataContextType {
   addLesson: (lesson: Lesson) => Promise<void>;
   addBatchLessons: (lessons: Lesson[]) => Promise<void>;
   addPayment: (payment: Payment) => Promise<void>;
+  updateSettings: (settings: Partial<AppSettings>) => Promise<void>;
   refreshData: () => Promise<void>;
   getStudentsByGroupId: (groupId: string) => Student[];
   takeAttendance: (groupId: string, date: string, topic: string, attendanceList: AttendanceItem[]) => Promise<void>;
@@ -26,27 +37,46 @@ interface DataContextType {
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export function DataProvider({ children }: { children: ReactNode }) {
+  const router = useRouter();
   const [teacher, setTeacherState] = useState<Teacher | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
+  const [settings, setSettingsState] = useState<AppSettings>({ currency: '$', instructionCategory: '', language: 'en' });
   const [loading, setLoading] = useState(true);
 
   const loadData = async () => {
     try {
-      const [t, s, l, p, g] = await Promise.all([
+      const [t, s, l, p, g, sets] = await Promise.all([
         StorageService.getTeacher(),
         StorageService.getStudents(),
         StorageService.getLessons(),
         StorageService.getPayments(),
         StorageService.getGroups(),
+        StorageService.getSettings(),
       ]);
       setTeacherState(t);
       setStudents(s);
       setLessons(l);
       setPayments(p);
       setGroups(g || []);
+      if (sets) {
+        setSettingsState(sets);
+        if (sets.language) i18n.changeLanguage(sets.language);
+      } else {
+        // First launch or no settings, check AsyncStorage for language
+        const savedLang = await AsyncStorage.getItem('@app_language');
+        if (savedLang) {
+          setSettingsState(prev => ({ ...prev, language: savedLang }));
+          i18n.changeLanguage(savedLang);
+        } else {
+          // Redirect to language onboarding
+          setTimeout(() => {
+            router.push('/onboarding/language');
+          }, 100);
+        }
+      }
     } catch (e) { console.error(e); } finally { setLoading(false); }
   };
 
@@ -96,6 +126,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const s = students.find(x => x.id === v.studentId);
     if (s) await updateStudent({ ...s, balance: s.balance - v.amount });
   };
+
+  const updateSettings = async (newSettings: Partial<AppSettings>) => {
+    const updated = { ...settings, ...newSettings };
+    await StorageService.saveSettings(updated);
+    setSettingsState(updated);
+  };
+
   const refreshData = async () => { await loadData(); };
 
   const getStudentsByGroupId = (groupId: string) => {
@@ -120,9 +157,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   return (
     <DataContext.Provider value={{
-      teacher, students, lessons, payments, groups, loading,
+      teacher, students, lessons, payments, groups, settings, loading,
       setTeacher, addStudent, updateStudent, deleteStudent,
-      addGroup, deleteGroup, addLesson, addBatchLessons, addPayment, refreshData,
+      addGroup, deleteGroup, addLesson, addBatchLessons, addPayment, updateSettings, refreshData,
       getStudentsByGroupId, takeAttendance
     }}>
       {children}

@@ -1,16 +1,17 @@
-
-import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, Platform, Linking } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useData } from '../../src/context/DataContext';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { ArrowLeft, CheckCircle, Edit, MessageCircle, XCircle } from 'lucide-react-native';
+import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Alert, Image, Linking, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../../src/constants/Colors';
-import { ArrowLeft, Edit, MessageCircle, CheckCircle, XCircle } from 'lucide-react-native';
+import { useData } from '../../src/context/DataContext';
 import { generateReportMessage } from '../../src/utils/messageGenerator';
 
 export default function StudentDetailScreen() {
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const { id } = useLocalSearchParams();
-  const { students, lessons, payments, addPayment, teacher } = useData();
+  const { students, lessons, payments, addPayment, teacher, settings } = useData();
 
   const studentId = Array.isArray(id) ? id[0] : id;
   const student = students.find(s => s.id === studentId);
@@ -21,20 +22,16 @@ export default function StudentDetailScreen() {
   const processedLessons = useMemo(() => {
     if (!student) return [];
 
-    // Get student's lessons and sort Oldest to Newest for calculation
     const studentLessons = lessons
       .filter(l => l.studentId === studentId)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-    // Calculate total payments made by this student
     let totalPaymentPool = payments
       .filter(p => p.studentId === studentId)
       .reduce((sum, p) => sum + p.amount, 0);
 
-    // Map lessons to add isPaid status
     const lessonsWithStatus = studentLessons.map(lesson => {
       let isPaid = false;
-      // If we have enough money in the pool to cover this lesson
       if (totalPaymentPool >= lesson.fee) {
         totalPaymentPool -= lesson.fee;
         isPaid = true;
@@ -42,7 +39,6 @@ export default function StudentDetailScreen() {
       return { ...lesson, isPaid };
     });
 
-    // Reverse to show Newest First (Standard history view)
     return lessonsWithStatus.reverse();
   }, [lessons, payments, studentId, student]);
 
@@ -58,19 +54,19 @@ export default function StudentDetailScreen() {
         <View style={[styles.header, { backgroundColor: Colors.card }]}>
           <TouchableOpacity onPress={() => router.back()}><ArrowLeft size={24} color={Colors.text} /></TouchableOpacity>
         </View>
-        <View style={styles.center}><Text>Öğrenci bulunamadı.</Text></View>
+        <View style={styles.center}><Text>{t('common.noData')}</Text></View>
       </View>
     );
   }
 
   const handlePayment = async () => {
     if (!paymentAmount) {
-      Alert.alert('Hata', 'Lütfen bir tutar giriniz.');
+      Alert.alert(t('common.error'), t('common.noData'));
       return;
     }
     const amount = parseFloat(paymentAmount);
     if (isNaN(amount) || amount <= 0) {
-      Alert.alert('Hata', 'Geçerli bir tutar giriniz.');
+      Alert.alert(t('common.error'), t('common.error'));
       return;
     }
 
@@ -83,19 +79,20 @@ export default function StudentDetailScreen() {
         date: new Date().toISOString(),
       });
       setPaymentAmount('');
-      Alert.alert('Başarılı', 'Ödeme alındı.');
+      Alert.alert(t('common.welcome'), t('common.save'));
     } catch (error) {
-      Alert.alert('Hata', 'Ödeme kaydedilemedi.');
+      Alert.alert(t('common.error'), t('common.error'));
     }
   };
 
   const handleShareToWhatsApp = () => {
-    const message = generateReportMessage(student, lessons);
+    const message = generateReportMessage(student, lessons, t, settings.currency);
     const url = `whatsapp://send?text=${encodeURIComponent(message)}`;
-    Linking.openURL(url).catch(() => Alert.alert("Hata", "WhatsApp açılamadı."));
+    Linking.openURL(url).catch(() => Alert.alert(t('common.error'), "WhatsApp error"));
   };
 
   const themeColor = teacher?.themeColor || Colors.primary;
+  const locale = i18n.language === 'tr' ? 'tr-TR' : 'en-US';
 
   return (
     <View style={[styles.container, { backgroundColor: Colors.background }]}>
@@ -104,8 +101,8 @@ export default function StudentDetailScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
           <ArrowLeft size={24} color={Colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Öğrenci Detayı</Text>
-        <TouchableOpacity onPress={() => router.push(`/edit-student/${student.id}`)} style={[styles.iconBtn, { backgroundColor: Colors.primary }]}>
+        <Text style={styles.headerTitle}>{t('students.title')} {t('common.edit')}</Text>
+        <TouchableOpacity onPress={() => router.push(`/edit-student/${student.id}`)} style={[styles.iconBtn, { backgroundColor: themeColor }]}>
           <Edit size={24} color="#fff" />
         </TouchableOpacity>
       </View>
@@ -114,37 +111,65 @@ export default function StudentDetailScreen() {
         {/* Student Info Card */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <View style={[styles.avatar, { backgroundColor: themeColor }]}>
-              <Text style={styles.avatarText}>{student.fullName[0]}</Text>
+            <View style={styles.avatarWrapper}>
+              {student.image ? (
+                <Image source={{ uri: student.image }} style={styles.avatar} />
+              ) : (
+                <View style={[styles.avatar, { backgroundColor: themeColor }]}>
+                  <Text style={styles.avatarText}>{student.fullName[0]}</Text>
+                </View>
+              )}
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.studentName}>{student.fullName}</Text>
+              <View style={styles.nameRow}>
+                <Text style={styles.studentName}>{student.fullName}</Text>
+                {student.statusTag && (
+                  <View style={[
+                    styles.statusBadge,
+                    {
+                      backgroundColor: student.statusTag === 'Beginner' ? '#EBF5FF' :
+                        student.statusTag === 'Intermediate' ? '#ECFDF5' :
+                          student.statusTag === 'Advanced' ? '#F5F3FF' : '#FFFBEB'
+                    }
+                  ]}>
+                    <Text style={[
+                      styles.statusBadgeText,
+                      {
+                        color: student.statusTag === 'Beginner' ? '#3B82F6' :
+                          student.statusTag === 'Intermediate' ? '#10B981' :
+                            student.statusTag === 'Advanced' ? '#8B5CF6' : '#F59E0B'
+                      }
+                    ]}>
+                      {t(`students.${student.statusTag.toLowerCase().replace(' ', '')}`)}
+                    </Text>
+                  </View>
+                )}
+              </View>
               <Text style={styles.studentSub}>{student.grade}</Text>
             </View>
-
           </View>
           <View style={styles.divider} />
           <View style={styles.balanceRow}>
-            <Text style={styles.balanceLabel}>Güncel Bakiye</Text>
-            <Text style={[styles.balanceValue, { color: student.balance > 0 ? Colors.danger : Colors.success }]}>
-              {student.balance} ₺
+            <Text style={styles.balanceLabel}>{t('students.balance')}</Text>
+            <Text style={[styles.balanceValue, { color: student.balance > 0 ? Colors.error : Colors.success }]}>
+              {student.balance} {settings.currency}
             </Text>
           </View>
 
           {/* Inline Payment */}
           <View style={styles.paymentContainer}>
             <View style={styles.inputWrapper}>
-              <Text style={styles.currencyPrefix}>₺</Text>
+              <Text style={styles.currencyPrefix}>{settings.currency}</Text>
               <TextInput
                 style={styles.paymentInput}
-                placeholder="Tutar"
+                placeholder={t('finance.collected')}
                 keyboardType="numeric"
                 value={paymentAmount}
                 onChangeText={setPaymentAmount}
               />
             </View>
             <TouchableOpacity style={styles.payButton} onPress={handlePayment}>
-              <Text style={styles.payButtonText}>Tahsil Et</Text>
+              <Text style={styles.payButtonText}>{t('common.add')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -153,53 +178,53 @@ export default function StudentDetailScreen() {
         <View style={styles.section}>
           <TouchableOpacity onPress={handleShareToWhatsApp} style={styles.whatsappFullBtn}>
             <MessageCircle size={20} color="#fff" />
-            <Text style={styles.whatsappText}>Güncel durumu mesaj gönder</Text>
+            <Text style={styles.whatsappText}>{t('attendance.markAttendance')}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Lesson History */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Ders Geçmişi</Text>
+          <Text style={styles.sectionTitle}>{t('weekly-schedule')}</Text>
           {processedLessons.map(lesson => (
             <View key={lesson.id} style={[styles.lessonCard, lesson.isPaid && styles.paidCard]}>
               <View style={styles.lessonInfo}>
                 <Text style={[styles.lessonDate, lesson.isPaid && styles.strikethrough]}>
-                  {new Date(lesson.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })}
+                  {new Date(lesson.date).toLocaleDateString(locale, { day: 'numeric', month: 'long' })}
                 </Text>
                 <Text style={[styles.lessonTopic, lesson.isPaid && styles.strikethrough]}>
-                  {lesson.topic || 'Konu Belirtilmemiş'}
+                  {lesson.topic || t('common.noData')}
                 </Text>
               </View>
               <View style={styles.lessonMeta}>
                 <Text style={[styles.lessonFee, lesson.isPaid && styles.strikethrough]}>
-                  {lesson.fee} ₺
+                  {lesson.fee} {settings.currency}
                 </Text>
                 {lesson.isPaid ? (
                   <CheckCircle size={16} color={Colors.success} />
                 ) : (
-                  <XCircle size={16} color={Colors.danger} />
+                  <XCircle size={16} color={Colors.error} />
                 )}
               </View>
             </View>
           ))}
-          {processedLessons.length === 0 && <Text style={styles.emptyText}>Henüz ders kaydı yok.</Text>}
+          {processedLessons.length === 0 && <Text style={styles.emptyText}>{t('common.noData')}</Text>}
         </View>
 
         {/* Payment History */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Ödeme Geçmişi</Text>
+          <Text style={styles.sectionTitle}>{t('finance.collected')}</Text>
           {studentPayments.map(payment => (
             <View key={payment.id} style={styles.paymentCard}>
               <View style={styles.lessonInfo}>
                 <Text style={styles.lessonDate}>
-                  {new Date(payment.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })}
+                  {new Date(payment.date).toLocaleDateString(locale, { day: 'numeric', month: 'long' })}
                 </Text>
-                <Text style={styles.lessonTopic}>Tahsilat</Text>
+                <Text style={styles.lessonTopic}>{t('finance.collected')}</Text>
               </View>
-              <Text style={styles.paymentAmount}>-{payment.amount} ₺</Text>
+              <Text style={styles.paymentAmount}>-{payment.amount} {settings.currency}</Text>
             </View>
           ))}
-          {studentPayments.length === 0 && <Text style={styles.emptyText}>Henüz ödeme alınmadı.</Text>}
+          {studentPayments.length === 0 && <Text style={styles.emptyText}>{t('common.noData')}</Text>}
         </View>
 
         <View style={{ height: 40 }} />
@@ -217,11 +242,14 @@ const styles = StyleSheet.create({
 
   card: { margin: 20, padding: 20, backgroundColor: Colors.card, borderRadius: 20, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, elevation: 2 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  avatar: { width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center' },
+  avatarWrapper: { width: 50, height: 50, borderRadius: 25, overflow: 'hidden' },
+  avatar: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' },
   avatarText: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   studentName: { fontSize: 18, fontWeight: 'bold', color: Colors.text },
+  statusBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  statusBadgeText: { fontSize: 10, fontWeight: 'bold' },
   studentSub: { color: Colors.textSecondary },
-
 
   divider: { height: 1, backgroundColor: Colors.border, marginVertical: 16 },
   balanceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },

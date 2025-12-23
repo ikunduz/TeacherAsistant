@@ -1,21 +1,22 @@
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { useData } from '../../src/context/DataContext';
-import { Colors } from '../../src/constants/Colors';
-import { TrendingUp, TrendingDown, User } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { TrendingDown, TrendingUp } from 'lucide-react-native';
+import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Colors } from '../../src/constants/Colors';
+import { useData } from '../../src/context/DataContext';
 
 export default function BalanceScreen() {
-  const { students, payments } = useData();
+  const { t, i18n } = useTranslation();
+  const { students, payments, settings } = useData();
   const router = useRouter();
 
-  // Bir önceki ayın ödemelerini ve toplam borcu hesapla
+  // Calculate last month payments and total balance
   const { lastMonthPayments, totalBalance, lastMonthName } = useMemo(() => {
     const now = new Date();
     const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth(); // 0-11
+    const currentMonth = now.getMonth();
 
-    // Önceki ayı hesapla
     const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
     const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
 
@@ -28,45 +29,45 @@ export default function BalanceScreen() {
 
     const balance = students.reduce((sum, s) => sum + s.balance, 0);
 
-    // Önceki ayın ismini Türkçe olarak al
+    const locale = i18n.language === 'tr' ? 'tr-TR' : 'en-US';
     const lastMonthDate = new Date(lastMonthYear, lastMonth, 1);
-    const monthName = lastMonthDate.toLocaleString('tr-TR', { month: 'long' });
+    const monthName = lastMonthDate.toLocaleString(locale, { month: 'long' });
 
     return { lastMonthPayments: totalPayments, totalBalance: balance, lastMonthName: monthName };
-  }, [payments, students]);
+  }, [payments, students, i18n.language]);
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Finansal Durum</Text>
+        <Text style={styles.title}>{t('finance.title')}</Text>
       </View>
 
-      {/* Özet Kartları */}
+      {/* Summary Cards */}
       <View style={styles.summaryContainer}>
         <View style={styles.summaryCard}>
           <View style={styles.iconContainerGreen}>
             <TrendingUp size={24} color={Colors.success} />
           </View>
-          <Text style={styles.summaryLabel}>{lastMonthName} Ayı Tahsilat</Text>
-          <Text style={styles.summaryValue}>{lastMonthPayments} ₺</Text>
+          <Text style={styles.summaryLabel}>{lastMonthName} {t('finance.collected')}</Text>
+          <Text style={styles.summaryValue}>{lastMonthPayments} {settings.currency}</Text>
         </View>
         <View style={styles.summaryCard}>
           <View style={styles.iconContainerRed}>
-            <TrendingDown size={24} color={Colors.danger} />
+            <TrendingDown size={24} color={Colors.error} />
           </View>
-          <Text style={styles.summaryLabel}>Toplam Bakiye Borcu</Text>
-          <Text style={styles.summaryValue}>{totalBalance} ₺</Text>
+          <Text style={styles.summaryLabel}>{t('dashboard.totalPending')}</Text>
+          <Text style={styles.summaryValue}>{totalBalance} {settings.currency}</Text>
         </View>
       </View>
 
-      <Text style={styles.listTitle}>Öğrenci Bakiyeleri</Text>
+      <Text style={styles.listTitle}>{t('students.balance')}</Text>
 
-      {/* Öğrenci Listesi */}
-      <ScrollView contentContainerStyle={styles.listContainer}>
-        {students.sort((a,b) => b.balance - a.balance).map(student => (
+      {/* Student List */}
+      <ScrollView contentContainerStyle={styles.listContainer} showsVerticalScrollIndicator={false}>
+        {students.sort((a, b) => b.balance - a.balance).map(student => (
           <TouchableOpacity key={student.id} style={styles.studentCard} onPress={() => router.push(`/student/${student.id}`)}>
-             <View style={styles.avatarContainer}>
-                <Text style={styles.avatarText}>{student.fullName.charAt(0).toUpperCase()}</Text>
+            <View style={styles.avatarContainer}>
+              <Text style={styles.avatarText}>{student.fullName.charAt(0).toUpperCase()}</Text>
             </View>
             <View style={styles.studentInfo}>
               <Text style={styles.studentName}>{student.fullName}</Text>
@@ -74,7 +75,7 @@ export default function BalanceScreen() {
             </View>
             <View style={styles.balanceContainer}>
               <Text style={[styles.balanceText, student.balance > 0 ? styles.positiveBalance : styles.zeroBalance]}>
-                {student.balance} ₺
+                {student.balance} {settings.currency}
               </Text>
             </View>
           </TouchableOpacity>
@@ -179,7 +180,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   positiveBalance: {
-    color: Colors.danger,
+    color: Colors.error,
   },
   zeroBalance: {
     color: Colors.success,

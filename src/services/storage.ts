@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Teacher, Student, Lesson, Payment, Group } from '../types';
-import { encryptData, decryptData, isEncrypted } from './encryption';
+import { Group, Lesson, Payment, Student, Teacher } from '../types';
 import { sanitizeStorageData } from '../utils/validation';
+import { decryptData, encryptData, isEncrypted } from './encryption';
 
 const KEYS = {
   TEACHER: '@teacher',
@@ -10,6 +10,7 @@ const KEYS = {
   PAYMENTS: '@payments',
   GROUPS: '@groups',
   ENCRYPTED_FLAG: '@encrypted_v1', // Flag to track migration
+  SETTINGS: '@settings',
 };
 
 /**
@@ -70,6 +71,7 @@ async function ensureMigration(): Promise<void> {
       getEncrypted(KEYS.LESSONS, []),
       getEncrypted(KEYS.PAYMENTS, []),
       getEncrypted(KEYS.GROUPS, []),
+      getEncrypted(KEYS.SETTINGS, null),
     ]);
 
     // Mark as migrated
@@ -122,5 +124,13 @@ export const StorageService = {
 
   async getPayments(): Promise<Payment[]> {
     return await getEncrypted<Payment[]>(KEYS.PAYMENTS, []);
+  },
+
+  async saveSettings(data: any) {
+    await saveEncrypted(KEYS.SETTINGS, data);
+  },
+
+  async getSettings(): Promise<any | null> {
+    return await getEncrypted<any | null>(KEYS.SETTINGS, null);
   },
 };

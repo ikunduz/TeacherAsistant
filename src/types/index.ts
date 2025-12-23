@@ -16,12 +16,14 @@ export interface Student {
   grade: string;
   gender: 'Erkek' | 'Kız';
   lessonFee: number;
-  balance: number; // Bu alan kesinlikle number olacak
+  balance: number;
   notes: string;
   lastTopic: string;
   homeworkNotes: string;
   createdAt: string;
-  schedule?: ScheduleItem[]; // Haftalık sabit ders programı (Dizi olarak güncellendi)
+  schedule?: ScheduleItem[];
+  image?: string | null;
+  statusTag?: 'Beginner' | 'Intermediate' | 'Advanced' | 'On Hold';
 }
 
 export interface Group {

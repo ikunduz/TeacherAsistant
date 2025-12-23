@@ -1,50 +1,47 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useData } from '../../src/context/DataContext';
+import { Plus, Search, Trash2, User, UserPlus, Users } from 'lucide-react-native';
+import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Alert, FlatList, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../../src/constants/Colors';
-import { Search, UserPlus, ChevronRight, Users, User, Trash2, Plus } from 'lucide-react-native';
+import { useData } from '../../src/context/DataContext';
 
 export default function StudentsScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
-  const { students, groups, deleteStudent, deleteGroup } = useData();
+  const { students, groups, deleteStudent, deleteGroup, settings } = useData();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'individual' | 'group'>('individual');
 
-  // --- FİLTRELEME MANTIĞI ---
-
-  // 1. Birebir Öğrenciler: Hiçbir gruba dahil OLMAYANLAR
+  // --- FILTERING LOGIC ---
   const soloStudents = students.filter(student => {
     const isInAnyGroup = groups.some(group => group.studentIds.includes(student.id));
     return !isInAnyGroup;
   });
 
-  // 2. Arama Filtresi (Birebir)
   const filteredSoloStudents = soloStudents.filter(student =>
     student.fullName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // 3. Arama Filtresi (Gruplar)
   const filteredGroups = groups.filter(group =>
     group.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // --- SİLME İŞLEMLERİ ---
-
+  // --- DELETE ACTIONS ---
   const handleDeleteStudent = (studentId: string, studentName: string) => {
     Alert.alert(
-      'Öğrenciyi Sil',
-      `"${studentName}" adlı öğrenciyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`,
+      t('students.deleteConfirmTitle'),
+      t('students.deleteConfirmMessage', { name: studentName }),
       [
-        { text: 'Vazgeç', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Sil',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
               await deleteStudent(studentId);
             } catch (error) {
-              Alert.alert('Hata', 'Öğrenci silinirken bir hata oluştu.');
+              Alert.alert(t('common.error'), t('common.error'));
             }
           },
         },
@@ -54,18 +51,18 @@ export default function StudentsScreen() {
 
   const handleDeleteGroup = (groupId: string, groupName: string) => {
     Alert.alert(
-      'Grubu Sil',
-      `"${groupName}" adlı grubu silmek istediğinize emin misiniz? Gruptaki öğrenciler silinmez, sadece grup dağıtılır.`,
+      t('students.deleteGroupConfirmTitle'),
+      t('students.deleteGroupConfirmMessage', { name: groupName }),
       [
-        { text: 'Vazgeç', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Sil',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
               await deleteGroup(groupId);
             } catch (error) {
-              Alert.alert('Hata', 'Grup silinirken bir hata oluştu.');
+              Alert.alert(t('common.error'), t('common.error'));
             }
           },
         },
@@ -74,25 +71,51 @@ export default function StudentsScreen() {
   };
 
   // --- RENDER ITEMS ---
-
   const renderStudentItem = ({ item }: { item: any }) => (
     <TouchableOpacity
       style={styles.card}
       onPress={() => router.push(`/student/${item.id}`)}
     >
       <View style={styles.avatarContainer}>
-        <Text style={styles.avatarText}>{item.fullName.charAt(0).toUpperCase()}</Text>
+        {item.image ? (
+          <Image source={{ uri: item.image }} style={styles.avatarImage} />
+        ) : (
+          <Text style={styles.avatarText}>{item.fullName.charAt(0).toUpperCase()}</Text>
+        )}
       </View>
 
       <View style={styles.infoContainer}>
-        <Text style={styles.name}>{item.fullName}</Text>
-        <Text style={styles.subText}>{item.grade} • {item.lessonFee} ₺</Text>
+        <View style={styles.nameRow}>
+          <Text style={styles.name}>{item.fullName}</Text>
+          {item.statusTag && (
+            <View style={[
+              styles.statusBadge,
+              {
+                backgroundColor: item.statusTag === 'Beginner' ? '#EBF5FF' :
+                  item.statusTag === 'Intermediate' ? '#ECFDF5' :
+                    item.statusTag === 'Advanced' ? '#F5F3FF' : '#FFFBEB'
+              }
+            ]}>
+              <Text style={[
+                styles.statusBadgeText,
+                {
+                  color: item.statusTag === 'Beginner' ? '#3B82F6' :
+                    item.statusTag === 'Intermediate' ? '#10B981' :
+                      item.statusTag === 'Advanced' ? '#8B5CF6' : '#F59E0B'
+                }
+              ]}>
+                {t(`students.${item.statusTag.toLowerCase().replace(' ', '')}`)}
+              </Text>
+            </View>
+          )}
+        </View>
+        <Text style={styles.subText}>{item.grade} • {item.lessonFee} {settings.currency}</Text>
       </View>
 
       <View style={styles.balanceContainer}>
-        <Text style={styles.balanceLabel}>Bakiye</Text>
+        <Text style={styles.balanceLabel}>{t('students.balance')}</Text>
         <Text style={[styles.balanceValue, { color: item.balance > 0 ? Colors.primary : Colors.success }]}>
-          {item.balance} ₺
+          {item.balance} {settings.currency}
         </Text>
       </View>
 
@@ -100,7 +123,7 @@ export default function StudentsScreen() {
         style={styles.deleteButton}
         onPress={() => handleDeleteStudent(item.id, item.fullName)}
       >
-        <Trash2 size={20} color={Colors.danger} />
+        <Trash2 size={20} color={Colors.error || '#FF4444'} />
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -116,14 +139,14 @@ export default function StudentsScreen() {
 
       <View style={styles.infoContainer}>
         <Text style={styles.name}>{item.name}</Text>
-        <Text style={styles.subText}>{item.studentIds.length} Öğrenci</Text>
+        <Text style={styles.subText}>{item.studentIds.length} {t('students.title')}</Text>
       </View>
 
       <TouchableOpacity
         style={styles.deleteButton}
         onPress={() => handleDeleteGroup(item.id, item.name)}
       >
-        <Trash2 size={20} color={Colors.danger} />
+        <Trash2 size={20} color={Colors.error || '#FF4444'} />
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -132,7 +155,7 @@ export default function StudentsScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Listeler</Text>
+        <Text style={styles.title}>{t('students.title')}</Text>
         <TouchableOpacity
           onPress={() => router.push(activeTab === 'individual' ? '/add-student' : '/add-group')}
           style={styles.addButton}
@@ -148,30 +171,30 @@ export default function StudentsScreen() {
           onPress={() => setActiveTab('individual')}
         >
           <User size={18} color={activeTab === 'individual' ? Colors.primary : Colors.textSecondary} />
-          <Text style={[styles.tabText, activeTab === 'individual' && styles.activeTabText]}>Birebirler</Text>
+          <Text style={[styles.tabText, activeTab === 'individual' && styles.activeTabText]}>{t('students.individuals')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'group' && styles.activeTab]}
           onPress={() => setActiveTab('group')}
         >
           <Users size={18} color={activeTab === 'group' ? Colors.primary : Colors.textSecondary} />
-          <Text style={[styles.tabText, activeTab === 'group' && styles.activeTabText]}>Gruplar</Text>
+          <Text style={[styles.tabText, activeTab === 'group' && styles.activeTabText]}>{t('students.groups')}</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Arama Çubuğu */}
+      {/* Search Bar */}
       <View style={styles.searchContainer}>
         <Search size={20} color="#A0AEC0" style={{ marginRight: 10 }} />
         <TextInput
           style={styles.searchInput}
-          placeholder={activeTab === 'individual' ? "Öğrenci ara..." : "Grup ara..."}
+          placeholder={t('common.search')}
           placeholderTextColor="#A0AEC0"
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
       </View>
 
-      {/* Liste */}
+      {/* List */}
       {activeTab === 'individual' ? (
         <FlatList
           data={filteredSoloStudents}
@@ -182,7 +205,7 @@ export default function StudentsScreen() {
             <View style={styles.emptyState}>
               <User size={48} color="#CBD5E0" />
               <Text style={styles.emptyText}>
-                {searchQuery ? 'Sonuç bulunamadı.' : 'Henüz birebir öğrenci yok.'}
+                {searchQuery ? t('students.noResults') : t('students.noStudents')}
               </Text>
             </View>
           }
@@ -197,7 +220,7 @@ export default function StudentsScreen() {
             <View style={styles.emptyState}>
               <Users size={48} color="#CBD5E0" />
               <Text style={styles.emptyText}>
-                {searchQuery ? 'Sonuç bulunamadı.' : 'Henüz grup oluşturulmamış.'}
+                {searchQuery ? t('students.noResults') : t('students.noGroups')}
               </Text>
             </View>
           }
@@ -285,10 +308,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 14,
+    overflow: 'hidden',
   },
+  avatarImage: { width: '100%', height: '100%' },
   avatarText: { fontSize: 18, fontWeight: 'bold', color: Colors.primary },
   infoContainer: { flex: 1 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   name: { fontSize: 16, fontWeight: 'bold', color: Colors.text },
+  statusBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  statusBadgeText: { fontSize: 10, fontWeight: 'bold' },
   subText: { fontSize: 13, color: Colors.textSecondary, marginTop: 2 },
 
   balanceContainer: { alignItems: 'flex-end', marginRight: 16 },

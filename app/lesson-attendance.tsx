@@ -1,14 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useData } from '../src/context/DataContext';
+import { CheckCircle, Circle, FileText, Save, User, Users, X } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../src/constants/Colors';
+import { useData } from '../src/context/DataContext';
 import { Lesson } from '../src/types';
-import { X, CheckCircle, Circle, Users, User, Save, FileText } from 'lucide-react-native';
 
 export default function LessonAttendanceScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
-  const { students, groups, addBatchLessons } = useData();
+  const { students, groups, addBatchLessons, settings } = useData();
 
   const [mode, setMode] = useState<'individual' | 'group'>('group');
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
@@ -16,17 +18,15 @@ export default function LessonAttendanceScreen() {
 
   const [attendanceList, setAttendanceList] = useState<string[]>([]);
   const [customFees, setCustomFees] = useState<Record<string, string>>({});
-
-  // KONU VE ÖDEVLER BURADA TUTULUYOR
   const [topic, setTopic] = useState('');
 
-  // --- FİLTRELEME: GRUBU OLMAYAN ÖĞRENCİLER ---
+  // FILTER: Solo students
   const soloStudents = students.filter(student => {
     const isInAnyGroup = groups.some(group => group.studentIds.includes(student.id));
     return !isInAnyGroup;
   });
 
-  // GRUP MODU: LİSTE VE ÜCRET DOLDURMA
+  // Group mode: set fees
   useEffect(() => {
     if (mode === 'group' && selectedGroupId) {
       const group = groups.find(g => g.id === selectedGroupId);
@@ -47,7 +47,7 @@ export default function LessonAttendanceScreen() {
     }
   }, [selectedGroupId, mode, groups, students]);
 
-  // BİREYSEL MOD: ÜCRET DOLDURMA
+  // Individual mode: set fee
   useEffect(() => {
     if (mode === 'individual' && selectedStudentId) {
       const student = students.find(s => s.id === selectedStudentId);
@@ -73,13 +73,11 @@ export default function LessonAttendanceScreen() {
     const targetIds = mode === 'group' ? attendanceList : (selectedStudentId ? [selectedStudentId] : []);
 
     if (targetIds.length === 0) {
-      Alert.alert('Hata', 'Lütfen en az bir öğrenci seçin.');
+      Alert.alert(t('common.error'), t('attendance.noSelection'));
       return;
     }
 
-    // Konu girilmemişse uyarı verelim mi? Yoksa "Genel Tekrar" mı yazalım?
-    // Şimdilik boş geçilmesine izin verelim veya varsayılan atayalım.
-    const finalTopic = topic.trim() || 'Genel Ders';
+    const finalTopic = topic.trim() || t('attendance.generalLesson');
 
     try {
       const lessonsToSave: Lesson[] = targetIds.map(id => {
@@ -89,10 +87,10 @@ export default function LessonAttendanceScreen() {
         return {
           id: Date.now().toString() + Math.random().toString(),
           studentId: id,
-          studentName: student?.fullName || 'Bilinmeyen',
+          studentName: student?.fullName || 'Unknown',
           date: new Date().toISOString(),
           fee: fee,
-          topic: finalTopic, // BURASI ANA SAYFAYA GİDECEK
+          topic: finalTopic,
           type: mode,
           groupId: mode === 'group' ? (selectedGroupId || undefined) : undefined
         };
@@ -100,12 +98,12 @@ export default function LessonAttendanceScreen() {
 
       await addBatchLessons(lessonsToSave);
 
-      Alert.alert('Başarılı', `${lessonsToSave.length} ders kaydedildi.`, [
-        { text: 'Tamam', onPress: () => router.back() }
+      Alert.alert(t('common.welcome'), t('attendance.successMessage', { count: lessonsToSave.length }), [
+        { text: t('common.save'), onPress: () => router.back() }
       ]);
 
     } catch (error) {
-      Alert.alert('Hata', 'Kayıt sırasında bir sorun oluştu.');
+      Alert.alert(t('common.error'), t('common.error'));
     }
   };
 
@@ -113,21 +111,19 @@ export default function LessonAttendanceScreen() {
     ? students.filter(s => groups.find(g => g.id === selectedGroupId)?.studentIds.includes(s.id))
     : [];
 
-  // Seçim yapıldı mı kontrolü (Input'u göstermek için)
   const isSelectionMade = (mode === 'group' && selectedGroupId) || (mode === 'individual' && selectedStudentId);
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Ders İşle</Text>
+        <Text style={styles.headerTitle}>{t('attendance.markAttendance')}</Text>
         <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
           <X size={24} color={Colors.text} />
         </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-
-        {/* MOD SEÇİMİ */}
+        {/* Mode Toggle */}
         <View style={styles.section}>
           <View style={styles.toggleContainer}>
             <TouchableOpacity
@@ -135,22 +131,22 @@ export default function LessonAttendanceScreen() {
               onPress={() => setMode('group')}
             >
               <Users size={20} color={mode === 'group' ? Colors.primary : Colors.textSecondary} />
-              <Text style={[styles.toggleText, mode === 'group' && styles.toggleTextActive]}>Grup Dersi</Text>
+              <Text style={[styles.toggleText, mode === 'group' && styles.toggleTextActive]}>{t('attendance.groupSession')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.toggleButton, mode === 'individual' && styles.toggleButtonActive]}
               onPress={() => setMode('individual')}
             >
               <User size={20} color={mode === 'individual' ? Colors.primary : Colors.textSecondary} />
-              <Text style={[styles.toggleText, mode === 'individual' && styles.toggleTextActive]}>Birebir</Text>
+              <Text style={[styles.toggleText, mode === 'individual' && styles.toggleTextActive]}>{t('attendance.individualSession')}</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* GRUP LİSTESİ */}
+        {/* Group Select */}
         {mode === 'group' && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Grup Seç</Text>
+            <Text style={styles.sectionTitle}>{t('attendance.selectGroup')}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {groups.map(group => (
                 <TouchableOpacity
@@ -163,15 +159,15 @@ export default function LessonAttendanceScreen() {
                   </Text>
                 </TouchableOpacity>
               ))}
-              {groups.length === 0 && <Text style={styles.emptyText}>Henüz grup yok.</Text>}
+              {groups.length === 0 && <Text style={styles.emptyText}>{t('attendance.noGroups')}</Text>}
             </ScrollView>
           </View>
         )}
 
-        {/* BİREYSEL LİSTE */}
+        {/* Individual Select */}
         {mode === 'individual' && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Öğrenci Seç</Text>
+            <Text style={styles.sectionTitle}>{t('attendance.selectStudent')}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {soloStudents.map(student => (
                 <TouchableOpacity
@@ -184,20 +180,19 @@ export default function LessonAttendanceScreen() {
                   </Text>
                 </TouchableOpacity>
               ))}
-              {soloStudents.length === 0 && <Text style={styles.emptyText}>Müsait öğrenci yok.</Text>}
+              {soloStudents.length === 0 && <Text style={styles.emptyText}>{t('attendance.noStudents')}</Text>}
             </ScrollView>
           </View>
         )}
 
-        {/* YOKLAMA KARTLARI */}
+        {/* Attendance List */}
         {isSelectionMade && (
           <View style={styles.section}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
-              <Text style={styles.sectionTitle}>Öğrenci Listesi & Ücretler</Text>
-              {mode === 'group' && <Text style={{ color: Colors.textSecondary, fontWeight: '600' }}>{attendanceList.length} Kişi</Text>}
+              <Text style={styles.sectionTitle}>{t('attendance.attendanceFees')}</Text>
+              {mode === 'group' && <Text style={{ color: Colors.textSecondary, fontWeight: '600' }}>{t('attendance.studentsCount', { count: attendanceList.length })}</Text>}
             </View>
 
-            {/* GRUP GÖSTERİMİ */}
             {mode === 'group' ? studentsToDisplay.map(student => {
               const isPresent = attendanceList.includes(student.id);
               return (
@@ -210,13 +205,13 @@ export default function LessonAttendanceScreen() {
                     )}
                     <View>
                       <Text style={[styles.studentName, !isPresent && styles.textAbsent]}>{student.fullName}</Text>
-                      <Text style={{ fontSize: 12, color: Colors.textSecondary }}>{isPresent ? 'Derste' : 'Yok'}</Text>
+                      <Text style={{ fontSize: 12, color: Colors.textSecondary }}>{isPresent ? t('attendance.inClass') : t('attendance.notInClass')}</Text>
                     </View>
                   </TouchableOpacity>
 
                   {isPresent && (
                     <View style={styles.feeContainer}>
-                      <Text style={{ color: Colors.textSecondary, marginRight: 4 }}>₺</Text>
+                      <Text style={{ color: Colors.textSecondary, marginRight: 4 }}>{settings.currency}</Text>
                       <TextInput
                         style={styles.feeInput}
                         value={customFees[student.id]}
@@ -228,7 +223,6 @@ export default function LessonAttendanceScreen() {
                 </View>
               );
             }) : (
-              // BİREYSEL GÖSTERİM
               selectedStudentId && (
                 <View style={styles.studentCard}>
                   <View style={styles.studentInfo}>
@@ -238,7 +232,7 @@ export default function LessonAttendanceScreen() {
                     </Text>
                   </View>
                   <View style={styles.feeContainer}>
-                    <Text style={{ color: Colors.textSecondary, marginRight: 4 }}>₺</Text>
+                    <Text style={{ color: Colors.textSecondary, marginRight: 4 }}>{settings.currency}</Text>
                     <TextInput
                       style={styles.feeInput}
                       value={customFees[selectedStudentId]}
@@ -252,15 +246,15 @@ export default function LessonAttendanceScreen() {
           </View>
         )}
 
-        {/* YENİ EKLENEN KISIM: KONU VE ÖDEVLER */}
+        {/* Topic & Homework */}
         {isSelectionMade && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>İşlenen Konu ve Ödevler</Text>
+            <Text style={styles.sectionTitle}>{t('attendance.topicsHomework')}</Text>
             <View style={styles.textAreaContainer}>
               <FileText size={20} color={Colors.primary} style={styles.textAreaIcon} />
               <TextInput
                 style={styles.textArea}
-                placeholder="Bugün neler işlediniz? Ödev var mı?"
+                placeholder={t('attendance.topicsPlaceholder')}
                 placeholderTextColor="#A0AEC0"
                 value={topic}
                 onChangeText={setTopic}
@@ -277,10 +271,9 @@ export default function LessonAttendanceScreen() {
       <View style={styles.footer}>
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
           <Save size={24} color="#FFFFFF" style={{ marginRight: 8 }} />
-          <Text style={styles.saveButtonText}>Dersi Tamamla ve Kaydet</Text>
+          <Text style={styles.saveButtonText}>{t('attendance.completeSave')}</Text>
         </TouchableOpacity>
       </View>
-
     </KeyboardAvoidingView>
   );
 }
@@ -293,33 +286,26 @@ const styles = StyleSheet.create({
   content: { flex: 1, paddingHorizontal: 20 },
   section: { marginBottom: 24, marginTop: 20 },
   sectionTitle: { fontSize: 16, fontWeight: 'bold', color: Colors.text, marginBottom: 12 },
-
   toggleContainer: { flexDirection: 'row', gap: 12 },
   toggleButton: { flex: 1, backgroundColor: Colors.card, borderRadius: 16, padding: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, borderWidth: 2, borderColor: Colors.border },
   toggleButtonActive: { backgroundColor: Colors.background, borderColor: Colors.primary },
   toggleText: { fontSize: 15, fontWeight: '600', color: Colors.textSecondary },
   toggleTextActive: { color: Colors.primary },
-
   chip: { paddingHorizontal: 20, paddingVertical: 10, backgroundColor: Colors.card, borderRadius: 20, marginRight: 10, borderWidth: 2, borderColor: Colors.border },
   selectedChip: { borderColor: Colors.primary, backgroundColor: Colors.background },
   chipText: { color: Colors.textSecondary, fontWeight: '600' },
   selectedChipText: { color: Colors.primary },
   emptyText: { color: Colors.textSecondary, fontStyle: 'italic' },
-
   studentCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: Colors.card, padding: 16, borderRadius: 16, marginBottom: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 5, elevation: 2 },
   studentCardAbsent: { opacity: 0.6, backgroundColor: '#F8FAFC', shadowOpacity: 0, elevation: 0 },
   studentInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   studentName: { fontSize: 16, fontWeight: 'bold', color: Colors.text },
   textAbsent: { textDecorationLine: 'line-through', color: Colors.textSecondary },
-
   feeContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F7FAFC', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: Colors.border, width: 90 },
   feeInput: { fontSize: 15, fontWeight: 'bold', color: Colors.success, flex: 1, textAlign: 'right' },
-
-  // YENİ STİLLER (TEXT AREA)
   textAreaContainer: { flexDirection: 'row', alignItems: 'flex-start', backgroundColor: Colors.card, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: Colors.border, minHeight: 100 },
   textAreaIcon: { marginTop: 4, marginRight: 10 },
   textArea: { flex: 1, fontSize: 16, color: Colors.text, textAlignVertical: 'top' },
-
   footer: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 24, paddingBottom: 40 },
   saveButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.primary, borderRadius: 16, padding: 18, gap: 12, shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
   saveButtonText: { color: '#FFFFFF', fontSize: 18, fontWeight: 'bold' },

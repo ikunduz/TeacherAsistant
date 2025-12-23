@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, LayoutAnimation, Platform, UIManager } from 'react-native';
 import { useRouter } from 'expo-router';
+import { ChevronDown, ChevronUp, HelpCircle, X } from 'lucide-react-native';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { LayoutAnimation, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, UIManager, View } from 'react-native';
 import { Colors } from '../src/constants/Colors';
-import { X, ChevronDown, ChevronUp, HelpCircle } from 'lucide-react-native';
 
 if (Platform.OS === 'android') {
     if (UIManager.setLayoutAnimationEnabledExperimental) {
@@ -34,45 +35,17 @@ const FAQItem = ({ question, answer }: { question: string, answer: string }) => 
 };
 
 export default function HelpScreen() {
+    const { t } = useTranslation();
     const router = useRouter();
 
-    const faqs = [
-        {
-            question: 'Öğrenci nasıl eklenir?',
-            answer: 'Ana sayfadaki "Öğrenci Ekle" butonuna veya "Öğrenciler" sekmesindeki "+" butonuna tıklayın. Gerekli bilgileri doldurup "Kaydet" butonuna basın.'
-        },
-        {
-            question: 'Grup nasıl oluşturulur?',
-            answer: 'Ana sayfadaki "Grup Oluştur" butonuna tıklayın. Grup adını girin ve listelenen öğrencilerden gruba dahil etmek istediklerinizi seçin. Sadece henüz bir grubu olmayan öğrenciler listelenir.'
-        },
-        {
-            question: '"Ders İşle" özelliği nasıl çalışır?',
-            answer: '"Ders İşle" butonuna tıkladığınızda, bireysel veya grup dersi seçebilirsiniz. Dersi seçip "Kaydet" dediğinizde, ilgili öğrencilerin bakiyesine ders ücreti otomatik olarak eklenir ve ders geçmişlerine kaydedilir.'
-        },
-        {
-            question: 'Ödeme nasıl alınır?',
-            answer: 'Öğrenci detay sayfasına gidin. "Güncel Bakiye" kartındaki alana tutarı girip "Tahsil Et" butonuna basın. Tutar bakiyeden düşülür ve ödeme geçmişine eklenir.'
-        },
-        {
-            question: 'Veliye nasıl mesaj gönderilir?',
-            answer: 'Öğrenci detay sayfasında "Güncel durumu mesaj gönder" butonuna tıklayın. Bu işlem, öğrencinin bakiye ve son ders bilgilerini içeren hazır bir WhatsApp mesajı oluşturur.'
-        },
-        {
-            question: 'Uygulama rengi nasıl değiştirilir?',
-            answer: '"Profil" sekmesine gidin. "Uygulama Tema Rengi" bölümünden istediğiniz rengi seçin ve "Değişiklikleri Kaydet" butonuna basın.'
-        },
-        {
-            question: 'Verilerimi nasıl yedeklerim?',
-            answer: 'Profil sekmesinde "Veri ve Yedekleme" bölümüne gidin. "Yedekle (Dışa Aktar)" butonuna basın. Açılan paylaşım ekranından dosyayı Google Drive, WhatsApp veya E-posta ile kendinize gönderin. Yeni telefonda veya verileri geri yüklemek için "Yedeği Geri Yükle" butonuna basıp kaydettiğiniz dosyayı seçin.'
-        },
-    ];
+    const faqKeys = ['q1', 'q2', 'q3', 'q4', 'q5', 'q6', 'q7'];
 
     return (
         <View style={styles.container}>
             <View style={styles.header}>
                 <View style={styles.titleRow}>
                     <HelpCircle size={24} color={Colors.primary} />
-                    <Text style={styles.title}>Yardım ve Kullanım</Text>
+                    <Text style={styles.title}>{t('help.title')}</Text>
                 </View>
                 <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
                     <X size={24} color={Colors.text} />
@@ -81,11 +54,15 @@ export default function HelpScreen() {
 
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
                 <Text style={styles.introText}>
-                    Uygulamayı daha verimli kullanmak için sıkça sorulan sorulara göz atabilirsiniz.
+                    {t('help.intro')}
                 </Text>
 
-                {faqs.map((faq, index) => (
-                    <FAQItem key={index} question={faq.question} answer={faq.answer} />
+                {faqKeys.map((key) => (
+                    <FAQItem
+                        key={key}
+                        question={t(`help.faqs.${key}`)}
+                        answer={t(`help.faqs.${key.replace('q', 'a')}`)}
+                    />
                 ))}
 
                 <View style={{ height: 40 }} />

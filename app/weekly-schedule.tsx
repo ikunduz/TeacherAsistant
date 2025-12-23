@@ -1,9 +1,10 @@
+import { Stack, useRouter } from 'expo-router';
+import { ArrowLeft, Clock, User, Users } from 'lucide-react-native';
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { useData } from '../src/context/DataContext';
+import { useTranslation } from 'react-i18next';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../src/constants/Colors';
-import { User, Users, Clock, ArrowLeft } from 'lucide-react-native';
-import { useRouter, Stack } from 'expo-router';
+import { useData } from '../src/context/DataContext';
 
 interface ScheduledItem {
   name: string;
@@ -13,13 +14,18 @@ interface ScheduledItem {
 }
 
 export default function WeeklyScheduleScreen() {
+  const { t } = useTranslation();
   const { students, groups } = useData();
   const router = useRouter();
 
   const weekDays = [
-    { label: 'Pazartesi', value: 1 }, { label: 'Salı', value: 2 }, { label: 'Çarşamba', value: 3 },
-    { label: 'Perşembe', value: 4 }, { label: 'Cuma', value: 5 }, { label: 'Cumartesi', value: 6 },
-    { label: 'Pazar', value: 0 }
+    { label: t('onboarding.days.mon'), value: 1 },
+    { label: t('onboarding.days.tue'), value: 2 },
+    { label: t('onboarding.days.wed'), value: 3 },
+    { label: t('onboarding.days.thu'), value: 4 },
+    { label: t('onboarding.days.fri'), value: 5 },
+    { label: t('onboarding.days.sat'), value: 6 },
+    { label: t('onboarding.days.sun'), value: 0 }
   ];
 
   const schedule = useMemo(() => {
@@ -54,10 +60,10 @@ export default function WeeklyScheduleScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ArrowLeft size={24} color={Colors.text} />
         </TouchableOpacity>
-        <Text style={styles.title}>Haftalık Program</Text>
+        <Text style={styles.title}>{t('dashboard.weeklySchedule')}</Text>
       </View>
 
-      <ScrollView>
+      <ScrollView showsVerticalScrollIndicator={false}>
         {weekDays.map(day => {
           const dayLessons = schedule.filter(item => item.day === day.value);
           if (dayLessons.length === 0) return null;
@@ -75,7 +81,9 @@ export default function WeeklyScheduleScreen() {
                     <Text style={styles.lessonName}>{item.name}</Text>
                     <View style={styles.lessonTypeContainer}>
                       {item.type === 'individual' ? <User size={14} color={Colors.textSecondary} /> : <Users size={14} color={Colors.textSecondary} />}
-                      <Text style={styles.lessonTypeText}>{item.type === 'individual' ? 'Birebir Ders' : 'Grup Dersi'}</Text>
+                      <Text style={styles.lessonTypeText}>
+                        {item.type === 'individual' ? t('students.individuals') : t('students.groups')}
+                      </Text>
                     </View>
                   </View>
                 </View>
@@ -83,13 +91,14 @@ export default function WeeklyScheduleScreen() {
             </View>
           );
         })}
+        <View style={{ height: 40 }} />
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'transparent' },
+  container: { flex: 1, backgroundColor: Colors.background },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

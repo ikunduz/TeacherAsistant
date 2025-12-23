@@ -4,16 +4,17 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-import 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
+import 'react-native-reanimated';
 import { useColorScheme } from '../components/useColorScheme';
-import { DataProvider, useData } from '../src/context/DataContext';
 import { Colors } from '../src/constants/Colors';
-import { Fragment } from 'react'; // React'ten Fragment'ı import etmeniz gerekebilir
+import { DataProvider, useData } from '../src/context/DataContext';
+import '../src/i18n/config';
 
 export {
   // Catch any errors thrown by the Layout component.
-  ErrorBoundary,
+  ErrorBoundary
 } from 'expo-router';
 
 export const unstable_settings = {
@@ -50,19 +51,26 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
   // `useData` çağrısı artık doğrudan burada olmayacak.
-  const colorScheme = useColorScheme(); 
+  const colorScheme = useColorScheme();
 
   return (
     <DataProvider>
       {/* useData hook'u ThemeApplier içinde çağrılacak */}
-      <ThemeApplier colorScheme={colorScheme} /> 
+      <ThemeApplier colorScheme={colorScheme} />
     </DataProvider>
   );
 }
 
 // ThemeApplier bileşeni, DataProvider'ın bir çocuğu olarak kullanılacak
 function ThemeApplier({ colorScheme }: { colorScheme: any }) {
-  const { teacher, loading } = useData();
+  const { teacher, loading, settings } = useData();
+  const { i18n } = useTranslation();
+
+  useEffect(() => {
+    if (settings.language && i18n.language !== settings.language) {
+      i18n.changeLanguage(settings.language);
+    }
+  }, [settings.language]);
 
   if (loading) {
     return <View style={styles.loadingContainer} />;

@@ -1,7 +1,7 @@
-import { Student, Lesson } from '../types';
+import { Lesson, Student } from '../types';
 
-export const generateReportMessage = (student: Student, allLessons: Lesson[]) => {
-    // 1. Öğrencinin derslerini bul ve YENİDEN ESKİYE sırala
+export const generateReportMessage = (student: Student, allLessons: Lesson[], t: any, currency: string) => {
+    // 1. Find student lessons and sort NEWEST to OLDEST
     const studentLessons = allLessons
         .filter(l => l.studentId === student.id)
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -9,54 +9,35 @@ export const generateReportMessage = (student: Student, allLessons: Lesson[]) =>
     let unpaidLessons: Lesson[] = [];
 
     if (student.balance > 0) {
-        // --- MANTIK: Borcu kapatana kadar dersleri listeye ekle ---
         let collectedAmount = 0;
-
         for (const lesson of studentLessons) {
             if (collectedAmount < student.balance) {
                 unpaidLessons.push(lesson);
-                // Eğer dersin ücreti girilmemişse 0 sayar, hata vermez
                 collectedAmount += lesson.fee || 0;
             } else {
-                // Borç miktarını doldurduk, döngüden çık
                 break;
             }
         }
     } else {
-        // Borcu yoksa, bilgi amaçlı sadece en son işlenen dersi gösterelim mi?
-        // "Hiç ödenmemiş ders yok" demek yerine en sonuncuyu koymak nezaketen iyidir.
         unpaidLessons = studentLessons.slice(0, 1);
     }
 
-    // --- LİSTEYİ METNE DÖKME ---
-    // Listeyi ters çevirip (Eskiden Yeniye) yazdıralım ki mantıklı dursun
-    // Ya da Yeniden Eskiye (En son yapılan en üstte) kalsın. (Şu an en son yapılan en üstte)
-
     const topicsStr = unpaidLessons.length > 0
-        ? unpaidLessons.map(l => `- ${new Date(l.date).toLocaleDateString('tr-TR')}: ${l.topic || 'Genel Tekrar'} (${l.fee} TL)`).join('\n')
-        : "Listelenecek ders kaydı yok.";
+        ? unpaidLessons.map(l => `- ${new Date(l.date).toLocaleDateString()}: ${l.topic || t('attendance.whatsapp.topicReview')} (${l.fee} ${currency})`).join('\n')
+        : t('common.noData');
 
-    // --- BAKİYE METNİ ---
     let headerText = "";
     let balanceText = "";
 
     if (student.balance > 0) {
-        headerText = "Aşağıdaki tarihlerde derslerimizi tamamladık:";
-        balanceText = `Toplam ödenmesi gereken tutar: *${student.balance} TL*`;
+        headerText = t('attendance.whatsapp.headerUnpaid');
+        balanceText = t('attendance.whatsapp.totalPending', { amount: student.balance, currency });
     } else {
-        headerText = "Tüm ödemeleriniz günceldir. Son işlenen dersimiz:";
+        headerText = t('attendance.whatsapp.headerPaid');
         balanceText = student.balance === 0
-            ? "Güncel bakiyeniz bulunmamaktadır. Teşekkürler."
-            : `Hesabınızda *${Math.abs(student.balance)} TL* fazladan bakiye (alacak) bulunmaktadır.`;
+            ? t('attendance.whatsapp.noBalance')
+            : t('attendance.whatsapp.extraBalance', { amount: Math.abs(student.balance), currency });
     }
 
-    // --- SON MESAJ ---
-    return `Merhaba, ${student.fullName} ile güncel durumumuz:
-
-${headerText}
-${topicsStr}
-
-${balanceText}
-
-İyi günler dilerim.`;
+    return `${t('attendance.whatsapp.summary', { name: student.fullName })}\n\n${headerText}\n${topicsStr}\n\n${balanceText}\n\n${t('attendance.whatsapp.footer')}`;
 };
