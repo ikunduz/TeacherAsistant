@@ -3,6 +3,9 @@ import * as SecureStore from 'expo-secure-store';
 
 const ENCRYPTION_KEY_NAME = 'app_encryption_key';
 
+// Cache the encryption key to avoid repeated async calls
+let cachedKey: string | null = null;
+
 /**
  * React Native compatible base64 encoding
  * Converts a byte array to base64 string
@@ -56,6 +59,9 @@ function base64ToBytes(base64: string): number[] {
  * Gets or creates the encryption key stored in secure hardware
  */
 async function getEncryptionKey(): Promise<string> {
+    // Return cached key if available
+    if (cachedKey) return cachedKey;
+
     try {
         let key = await SecureStore.getItemAsync(ENCRYPTION_KEY_NAME);
 
@@ -68,17 +74,19 @@ async function getEncryptionKey(): Promise<string> {
             await SecureStore.setItemAsync(ENCRYPTION_KEY_NAME, key);
         }
 
+        cachedKey = key;
         return key;
     } catch (error) {
-        // Fallback for devices without secure storage
-        if (__DEV__) console.warn('SecureStore not available, using fallback');
-        return 'fallback_key_not_secure_' + Crypto.getRandomBytes(16).join('');
+        // Fallback for devices without secure storage (like Expo Go web)
+        if (__DEV__) console.warn('SecureStore not available, using fallback key');
+        // Use a consistent fallback key for development
+        cachedKey = 'dev_fallback_key_for_expo_go_testing_1234567890';
+        return cachedKey;
     }
 }
 
 /**
  * Simple XOR-based encryption (lightweight, sufficient for local data)
- * For production-grade apps, consider using expo-crypto's AES implementation
  */
 export async function encryptData(data: string): Promise<string> {
     try {
@@ -91,11 +99,12 @@ export async function encryptData(data: string): Promise<string> {
             encrypted.push(charCode ^ keyChar);
         }
 
-        // Convert to base64 for safe storage using RN-compatible function
+        // Convert to base64 for safe storage
         return bytesToBase64(encrypted);
     } catch (error) {
         if (__DEV__) console.error('Encryption failed:', error);
-        return data; // Fallback to plaintext in error case
+        // Return as plain JSON in error case with a marker
+        return 'PLAIN:' + data;
     }
 }
 
@@ -104,6 +113,11 @@ export async function encryptData(data: string): Promise<string> {
  */
 export async function decryptData(encryptedData: string): Promise<string> {
     try {
+        // Check for plain data fallback marker
+        if (encryptedData.startsWith('PLAIN:')) {
+            return encryptedData.substring(6);
+        }
+
         const key = await getEncryptionKey();
         const encrypted = base64ToBytes(encryptedData);
 
@@ -116,17 +130,33 @@ export async function decryptData(encryptedData: string): Promise<string> {
         return decrypted;
     } catch (error) {
         if (__DEV__) console.error('Decryption failed:', error);
-        return encryptedData; // Return as-is if decryption fails
+        throw error; // Re-throw to let caller handle
     }
 }
 
 /**
- * Check if data is encrypted (base64 check)
+ * Check if data is encrypted (base64 check or PLAIN marker)
  */
 export function isEncrypted(data: string): boolean {
     try {
+        // Plain text fallback marker
+        if (data.startsWith('PLAIN:')) return true;
+        // Check if it looks like base64
         return /^[A-Za-z0-9+/]+=*$/.test(data) && data.length > 20;
     } catch {
         return false;
+    }
+}
+
+/**
+ * Reset encryption key - useful for debugging
+ */
+export async function resetEncryptionKey(): Promise<void> {
+    try {
+        await SecureStore.deleteItemAsync(ENCRYPTION_KEY_NAME);
+        cachedKey = null;
+        if (__DEV__) console.log('Encryption key reset');
+    } catch (error) {
+        if (__DEV__) console.warn('Failed to reset encryption key:', error);
     }
 }

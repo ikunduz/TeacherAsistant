@@ -1,10 +1,14 @@
 import { Lesson, Student } from '../types';
 
-export const generateReportMessage = (student: Student, allLessons: Lesson[], t: any, currency: string) => {
+export const generateReportMessage = (student: Student, allLessons: Lesson[], t: any, currency: string, defaultLink?: string) => {
     // 1. Find student lessons and sort NEWEST to OLDEST
     const studentLessons = allLessons
         .filter(l => l.studentId === student.id)
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    const latestLesson = studentLessons[0];
+    const meetingLink = student.customMeetingLink || defaultLink;
+    const isOnline = latestLesson?.lessonType === 'Online';
 
     let unpaidLessons: Lesson[] = [];
 
@@ -39,5 +43,7 @@ export const generateReportMessage = (student: Student, allLessons: Lesson[], t:
             : t('attendance.whatsapp.extraBalance', { amount: Math.abs(student.balance), currency });
     }
 
-    return `${t('attendance.whatsapp.summary', { name: student.fullName })}\n\n${headerText}\n${topicsStr}\n\n${balanceText}\n\n${t('attendance.whatsapp.footer')}`;
+    const linkText = (isOnline && meetingLink) ? `\n\n${t('students.meetingLink')}: ${meetingLink}` : "";
+
+    return `${t('attendance.whatsapp.summary', { name: student.fullName })}\n\n${headerText}\n${topicsStr}\n\n${balanceText}${linkText}\n\n${t('attendance.whatsapp.footer')}`;
 };

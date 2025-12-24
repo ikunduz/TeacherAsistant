@@ -40,16 +40,30 @@ async function getEncrypted<T>(key: string, defaultValue: T): Promise<T> {
     const needsMigration = !isEncrypted(data);
 
     if (needsMigration) {
-      // Data is plaintext, migrate it
-      if (__DEV__) console.log(`Migrating ${key} to encrypted storage`);
-      const parsed = JSON.parse(data);
-      await saveEncrypted(key, parsed); // Re-save encrypted
-      return parsed;
+      // Data is plaintext, try to parse it
+      try {
+        if (__DEV__) console.log(`Migrating ${key} to encrypted storage`);
+        const parsed = JSON.parse(data);
+        await saveEncrypted(key, parsed); // Re-save encrypted
+        return parsed;
+      } catch (parseError) {
+        // Plaintext data is corrupted, reset to default
+        if (__DEV__) console.warn(`Corrupted plaintext data for ${key}, resetting to default`);
+        await AsyncStorage.removeItem(key);
+        return defaultValue;
+      }
     }
 
     // Data is already encrypted, decrypt it
-    const decrypted = await decryptData(data);
-    return JSON.parse(decrypted);
+    try {
+      const decrypted = await decryptData(data);
+      return JSON.parse(decrypted);
+    } catch (decryptError) {
+      // Decryption or parse failed, data is corrupted
+      if (__DEV__) console.warn(`Failed to decrypt/parse ${key}, resetting to default:`, decryptError);
+      await AsyncStorage.removeItem(key);
+      return defaultValue;
+    }
   } catch (error) {
     if (__DEV__) console.error(`Get failed for ${key}:`, error);
     return defaultValue;
@@ -132,5 +146,23 @@ export const StorageService = {
 
   async getSettings(): Promise<any | null> {
     return await getEncrypted<any | null>(KEYS.SETTINGS, null);
+  },
+
+  async clearAllData(): Promise<void> {
+    try {
+      await Promise.all([
+        AsyncStorage.removeItem(KEYS.TEACHER),
+        AsyncStorage.removeItem(KEYS.STUDENTS),
+        AsyncStorage.removeItem(KEYS.LESSONS),
+        AsyncStorage.removeItem(KEYS.PAYMENTS),
+        AsyncStorage.removeItem(KEYS.GROUPS),
+        AsyncStorage.removeItem(KEYS.SETTINGS),
+        AsyncStorage.removeItem(KEYS.ENCRYPTED_FLAG),
+      ]);
+      if (__DEV__) console.log('All data cleared successfully');
+    } catch (error) {
+      if (__DEV__) console.error('Failed to clear all data:', error);
+      throw error;
+    }
   },
 };

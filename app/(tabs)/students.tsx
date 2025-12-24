@@ -1,332 +1,566 @@
 import { useRouter } from 'expo-router';
-import { Plus, Search, Trash2, User, UserPlus, Users } from 'lucide-react-native';
-import React, { useState } from 'react';
+import { ArrowLeft, CreditCard, MessageCircle, Search, Users } from 'lucide-react-native';
+import React, { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, FlatList, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { Colors } from '../../src/constants/Colors';
+import {
+  Animated,
+  Image,
+  Linking,
+  PanResponder,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { Colors, TagColors } from '../../src/constants/Colors';
 import { useData } from '../../src/context/DataContext';
+import { Student } from '../../src/types';
+
+type TabType = 'individuals' | 'groups';
 
 export default function StudentsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { students, groups, deleteStudent, deleteGroup, settings } = useData();
+  const { students, groups, settings } = useData();
+  const [activeTab, setActiveTab] = useState<TabType>('individuals');
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'individual' | 'group'>('individual');
+  const [showSearch, setShowSearch] = useState(false);
 
-  // --- FILTERING LOGIC ---
-  const soloStudents = students.filter(student => {
-    const isInAnyGroup = groups.some(group => group.studentIds.includes(student.id));
-    return !isInAnyGroup;
-  });
-
-  const filteredSoloStudents = soloStudents.filter(student =>
-    student.fullName.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const filteredGroups = groups.filter(group =>
-    group.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  // --- DELETE ACTIONS ---
-  const handleDeleteStudent = (studentId: string, studentName: string) => {
-    Alert.alert(
-      t('students.deleteConfirmTitle'),
-      t('students.deleteConfirmMessage', { name: studentName }),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('common.delete'),
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteStudent(studentId);
-            } catch (error) {
-              Alert.alert(t('common.error'), t('common.error'));
-            }
-          },
-        },
-      ]
+  // Filter students based on search
+  const filteredStudents = useMemo(() => {
+    if (!searchQuery) return students;
+    const query = searchQuery.toLowerCase();
+    return students.filter(s =>
+      s.fullName.toLowerCase().includes(query) ||
+      s.grade?.toLowerCase().includes(query)
     );
+  }, [students, searchQuery]);
+
+  // Filter groups based on search
+  const filteredGroups = useMemo(() => {
+    if (!searchQuery) return groups;
+    const query = searchQuery.toLowerCase();
+    return groups.filter(g => g.name.toLowerCase().includes(query));
+  }, [groups, searchQuery]);
+
+  const formatCurrency = (amount: number) => {
+    const symbol = settings.currency || '₺';
+    const prefix = amount < 0 ? '-' : '';
+    return `${prefix}${symbol}${Math.abs(amount).toFixed(2)}`;
   };
 
-  const handleDeleteGroup = (groupId: string, groupName: string) => {
-    Alert.alert(
-      t('students.deleteGroupConfirmTitle'),
-      t('students.deleteGroupConfirmMessage', { name: groupName }),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('common.delete'),
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteGroup(groupId);
-            } catch (error) {
-              Alert.alert(t('common.error'), t('common.error'));
-            }
-          },
-        },
-      ]
-    );
+  const getTagStyle = (tag?: string) => {
+    switch (tag?.toLowerCase()) {
+      case 'advanced':
+        return TagColors.advanced;
+      case 'beginner':
+        return TagColors.beginner;
+      case 'intermediate':
+        return TagColors.intermediate;
+      default:
+        return TagColors.beginner;
+    }
   };
 
-  // --- RENDER ITEMS ---
-  const renderStudentItem = ({ item }: { item: any }) => (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={() => router.push(`/student/${item.id}`)}
-    >
-      <View style={styles.avatarContainer}>
-        {item.image ? (
-          <Image source={{ uri: item.image }} style={styles.avatarImage} />
-        ) : (
-          <Text style={styles.avatarText}>{item.fullName.charAt(0).toUpperCase()}</Text>
-        )}
-      </View>
+  const handleWhatsApp = (phone?: string) => {
+    if (phone) {
+      const cleanPhone = phone.replace(/[^0-9]/g, '');
+      Linking.openURL(`whatsapp://send?phone=${cleanPhone}`);
+    }
+  };
 
-      <View style={styles.infoContainer}>
-        <View style={styles.nameRow}>
-          <Text style={styles.name}>{item.fullName}</Text>
-          {item.statusTag && (
-            <View style={[
-              styles.statusBadge,
-              {
-                backgroundColor: item.statusTag === 'Beginner' ? '#EBF5FF' :
-                  item.statusTag === 'Intermediate' ? '#ECFDF5' :
-                    item.statusTag === 'Advanced' ? '#F5F3FF' : '#FFFBEB'
-              }
-            ]}>
-              <Text style={[
-                styles.statusBadgeText,
-                {
-                  color: item.statusTag === 'Beginner' ? '#3B82F6' :
-                    item.statusTag === 'Intermediate' ? '#10B981' :
-                      item.statusTag === 'Advanced' ? '#8B5CF6' : '#F59E0B'
-                }
-              ]}>
-                {t(`students.${item.statusTag.toLowerCase().replace(' ', '')}`)}
-              </Text>
-            </View>
-          )}
-        </View>
-        <Text style={styles.subText}>{item.grade} • {item.lessonFee} {settings.currency}</Text>
-      </View>
-
-      <View style={styles.balanceContainer}>
-        <Text style={styles.balanceLabel}>{t('students.balance')}</Text>
-        <Text style={[styles.balanceValue, { color: item.balance > 0 ? Colors.primary : Colors.success }]}>
-          {item.balance} {settings.currency}
-        </Text>
-      </View>
-
-      <TouchableOpacity
-        style={styles.deleteButton}
-        onPress={() => handleDeleteStudent(item.id, item.fullName)}
-      >
-        <Trash2 size={20} color={Colors.error || '#FF4444'} />
-      </TouchableOpacity>
-    </TouchableOpacity>
-  );
-
-  const renderGroupItem = ({ item }: { item: any }) => (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={() => router.push(`/group/${item.id}` as any)}
-    >
-      <View style={styles.avatarContainer}>
-        <Users size={24} color={Colors.primary} />
-      </View>
-
-      <View style={styles.infoContainer}>
-        <Text style={styles.name}>{item.name}</Text>
-        <Text style={styles.subText}>{item.studentIds.length} {t('students.title')}</Text>
-      </View>
-
-      <TouchableOpacity
-        style={styles.deleteButton}
-        onPress={() => handleDeleteGroup(item.id, item.name)}
-      >
-        <Trash2 size={20} color={Colors.error || '#FF4444'} />
-      </TouchableOpacity>
-    </TouchableOpacity>
-  );
+  const handleCollectPayment = (studentId: string) => {
+    router.push(`/student/${studentId}?openPayment=true` as any);
+  };
 
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>{t('students.title')}</Text>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <ArrowLeft size={24} color={Colors.text} />
+        </TouchableOpacity>
+
+        {showSearch ? (
+          <View style={styles.searchContainer}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder={t('common.search')}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoFocus
+            />
+          </View>
+        ) : (
+          <Text style={styles.headerTitle}>{t('students.title')}</Text>
+        )}
+
         <TouchableOpacity
-          onPress={() => router.push(activeTab === 'individual' ? '/add-student' : '/add-group')}
-          style={styles.addButton}
+          style={styles.searchButton}
+          onPress={() => setShowSearch(!showSearch)}
         >
-          {activeTab === 'individual' ? <UserPlus size={24} color={Colors.primary} /> : <Plus size={24} color={Colors.primary} />}
+          <Search size={24} color={Colors.text} />
         </TouchableOpacity>
       </View>
 
-      {/* Tab Selector */}
+      {/* Tabs */}
       <View style={styles.tabContainer}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'individual' && styles.activeTab]}
-          onPress={() => setActiveTab('individual')}
+          style={[styles.tab, activeTab === 'individuals' && styles.tabActive]}
+          onPress={() => setActiveTab('individuals')}
         >
-          <User size={18} color={activeTab === 'individual' ? Colors.primary : Colors.textSecondary} />
-          <Text style={[styles.tabText, activeTab === 'individual' && styles.activeTabText]}>{t('students.individuals')}</Text>
+          <Text style={[styles.tabText, activeTab === 'individuals' && styles.tabTextActive]}>
+            {t('students.individuals')}
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'group' && styles.activeTab]}
-          onPress={() => setActiveTab('group')}
+          style={[styles.tab, activeTab === 'groups' && styles.tabActive]}
+          onPress={() => setActiveTab('groups')}
         >
-          <Users size={18} color={activeTab === 'group' ? Colors.primary : Colors.textSecondary} />
-          <Text style={[styles.tabText, activeTab === 'group' && styles.activeTabText]}>{t('students.groups')}</Text>
+          <Text style={[styles.tabText, activeTab === 'groups' && styles.tabTextActive]}>
+            {t('students.groups')}
+          </Text>
         </TouchableOpacity>
       </View>
 
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <Search size={20} color="#A0AEC0" style={{ marginRight: 10 }} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder={t('common.search')}
-          placeholderTextColor="#A0AEC0"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-      </View>
+      {/* Content */}
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        {activeTab === 'individuals' ? (
+          filteredStudents.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>{t('students.noStudents')}</Text>
+            </View>
+          ) : (
+            filteredStudents.map((student) => (
+              <StudentCard
+                key={student.id}
+                student={student}
+                formatCurrency={formatCurrency}
+                getTagStyle={getTagStyle}
+                onPress={() => router.push(`/student/${student.id}` as any)}
+                onWhatsApp={() => handleWhatsApp(student.phoneNumber)}
+                onCollectPayment={() => handleCollectPayment(student.id)}
+              />
+            ))
+          )
+        ) : (
+          filteredGroups.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>{t('groups.noGroups')}</Text>
+            </View>
+          ) : (
+            filteredGroups.map((group) => (
+              <TouchableOpacity
+                key={group.id}
+                style={styles.groupCard}
+                onPress={() => router.push(`/group/${group.id}` as any)}
+              >
+                <View style={styles.groupInfo}>
+                  <View style={styles.groupIconContainer}>
+                    <Users size={24} color={Colors.orange} />
+                  </View>
+                  <View>
+                    <Text style={styles.groupName}>{group.name}</Text>
+                    <Text style={styles.groupSubtext}>
+                      {group.studentIds.length} {t('students.title')}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.groupBalance}>
+                  <Text style={styles.balanceLabel}>{t('students.balance')}</Text>
+                  <Text style={styles.balanceValuePositive}>
+                    {formatCurrency(0)}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))
+          )
+        )}
 
-      {/* List */}
-      {activeTab === 'individual' ? (
-        <FlatList
-          data={filteredSoloStudents}
-          keyExtractor={item => item.id}
-          renderItem={renderStudentItem}
-          contentContainerStyle={styles.listContent}
-          ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <User size={48} color="#CBD5E0" />
-              <Text style={styles.emptyText}>
-                {searchQuery ? t('students.noResults') : t('students.noStudents')}
-              </Text>
+        <View style={{ height: 100 }} />
+      </ScrollView>
+    </View>
+  );
+}
+
+// Swipeable Student Card Component
+interface StudentCardProps {
+  student: Student;
+  formatCurrency: (amount: number) => string;
+  getTagStyle: (tag?: string) => { bg: string; text: string };
+  onPress: () => void;
+  onWhatsApp: () => void;
+  onCollectPayment: () => void;
+}
+
+function StudentCard({
+  student,
+  formatCurrency,
+  getTagStyle,
+  onPress,
+  onWhatsApp,
+  onCollectPayment
+}: StudentCardProps) {
+  const translateX = useRef(new Animated.Value(0)).current;
+  const tagStyle = getTagStyle(student.statusTag);
+  const { t } = useTranslation();
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return Math.abs(gestureState.dx) > 10 && Math.abs(gestureState.dy) < 10;
+      },
+      onPanResponderMove: (_, gestureState) => {
+        // Limit swipe distance
+        const clampedX = Math.max(-100, Math.min(100, gestureState.dx));
+        translateX.setValue(clampedX);
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dx < -50) {
+          // Swipe left - WhatsApp
+          Animated.spring(translateX, {
+            toValue: -80,
+            useNativeDriver: true,
+          }).start();
+        } else if (gestureState.dx > 50) {
+          // Swipe right - Collect Payment
+          Animated.spring(translateX, {
+            toValue: 80,
+            useNativeDriver: true,
+          }).start();
+        } else {
+          // Reset
+          Animated.spring(translateX, {
+            toValue: 0,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    })
+  ).current;
+
+  const resetPosition = () => {
+    Animated.spring(translateX, {
+      toValue: 0,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  return (
+    <View style={styles.swipeContainer}>
+      {/* Left Action - Collect Payment */}
+      <TouchableOpacity
+        style={[styles.swipeAction, styles.swipeActionLeft]}
+        onPress={() => {
+          resetPosition();
+          onCollectPayment();
+        }}
+      >
+        <CreditCard size={20} color={Colors.textSecondary} />
+        <Text style={styles.swipeActionText}>{t('finance.collectPayment')}</Text>
+      </TouchableOpacity>
+
+      {/* Right Action - WhatsApp */}
+      <TouchableOpacity
+        style={[styles.swipeAction, styles.swipeActionRight]}
+        onPress={() => {
+          resetPosition();
+          onWhatsApp();
+        }}
+      >
+        <MessageCircle size={20} color={Colors.success} />
+        <Text style={styles.swipeActionText}>WhatsApp</Text>
+      </TouchableOpacity>
+
+      {/* Card */}
+      <Animated.View
+        style={[
+          styles.studentCard,
+          { transform: [{ translateX }] },
+        ]}
+        {...panResponder.panHandlers}
+      >
+        <TouchableOpacity style={styles.studentCardInner} onPress={onPress} activeOpacity={0.9}>
+          <View style={styles.studentInfo}>
+            {student.image ? (
+              <Image source={{ uri: student.image }} style={styles.avatar} />
+            ) : (
+              <View style={[styles.avatarPlaceholder, { backgroundColor: Colors.primary + '20' }]}>
+                <Text style={[styles.avatarText, { color: Colors.primary }]}>
+                  {student.fullName.charAt(0)}
+                </Text>
+              </View>
+            )}
+            <View style={styles.studentDetails}>
+              <Text style={styles.studentName}>{student.fullName}</Text>
+              <View style={[styles.tag, { backgroundColor: tagStyle.bg }]}>
+                <Text style={[styles.tagText, { color: tagStyle.text }]}>
+                  {t(`students.${student.statusTag?.toLowerCase().replace(' ', '') || 'beginner'}`)}
+                </Text>
+              </View>
             </View>
-          }
-        />
-      ) : (
-        <FlatList
-          data={filteredGroups}
-          keyExtractor={item => item.id}
-          renderItem={renderGroupItem}
-          contentContainerStyle={styles.listContent}
-          ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <Users size={48} color="#CBD5E0" />
-              <Text style={styles.emptyText}>
-                {searchQuery ? t('students.noResults') : t('students.noGroups')}
-              </Text>
-            </View>
-          }
-        />
-      )}
+          </View>
+          <View style={styles.balanceContainer}>
+            <Text style={styles.balanceLabel}>{t('students.balance')}</Text>
+            <Text
+              style={[
+                styles.balanceValue,
+                student.balance < 0 ? styles.balanceNegative : styles.balancePositive,
+              ]}
+            >
+              {formatCurrency(student.balance)}
+            </Text>
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'transparent' },
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+
+  // Header
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 24,
-    paddingTop: 60,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 50,
+    paddingBottom: 16,
     backgroundColor: Colors.card,
   },
-  title: { fontSize: 24, fontWeight: 'bold', color: Colors.text },
-  addButton: { padding: 8, backgroundColor: '#FFF5F7', borderRadius: 12 },
+  backButton: {
+    padding: 8,
+    marginLeft: -8,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: Colors.text,
+    flex: 1,
+    textAlign: 'center',
+  },
+  searchButton: {
+    padding: 8,
+    marginRight: -8,
+  },
+  searchContainer: {
+    flex: 1,
+    marginHorizontal: 16,
+  },
+  searchInput: {
+    backgroundColor: Colors.background,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    fontSize: 16,
+  },
 
+  // Tabs
   tabContainer: {
     flexDirection: 'row',
-    padding: 16,
-    gap: 12,
+    backgroundColor: Colors.card,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
   },
   tab: {
     flex: 1,
-    flexDirection: 'row',
+    paddingVertical: 14,
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 12,
-    backgroundColor: Colors.card,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    gap: 8,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
   },
-  activeTab: {
-    borderColor: Colors.primary,
-    backgroundColor: '#FFF5F7',
+  tabActive: {
+    borderBottomColor: Colors.primary,
   },
   tabText: {
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '500',
     color: Colors.textSecondary,
   },
-  activeTabText: {
+  tabTextActive: {
     color: Colors.primary,
+    fontWeight: '600',
   },
 
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.card,
-    marginHorizontal: 20,
-    marginBottom: 20,
-    padding: 14,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
+  // Content
+  content: {
+    flex: 1,
   },
-  searchInput: { flex: 1, fontSize: 16, color: Colors.text },
-
-  listContent: { paddingHorizontal: 20, paddingBottom: 20 },
-
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.card,
+  contentContainer: {
     padding: 16,
+  },
+  emptyState: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 15,
+    color: Colors.textMuted,
+    fontStyle: 'italic',
+  },
+
+  // Swipe Container
+  swipeContainer: {
+    marginBottom: 16,
     borderRadius: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
+    overflow: 'hidden',
+    height: 112,
+  },
+  swipeAction: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: 100,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#E2E8F0',
+  },
+  swipeActionLeft: {
+    left: 0,
+  },
+  swipeActionRight: {
+    right: 0,
+  },
+  swipeActionText: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    marginTop: 4,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+
+  // Student Card
+  studentCard: {
+    backgroundColor: Colors.card,
+    borderRadius: 16,
+    shadowColor: Colors.shadowColor,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  studentCardInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    height: 112,
+  },
+  studentInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    flex: 1,
+  },
+  avatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+  },
+  avatarPlaceholder: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  studentDetails: {
+    flex: 1,
+  },
+  studentName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.text,
+    marginBottom: 6,
+  },
+  tag: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  tagText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  balanceContainer: {
+    alignItems: 'flex-end',
+  },
+  balanceLabel: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    marginBottom: 4,
+  },
+  balanceValue: {
+    fontSize: 22,
+    fontWeight: '700',
+  },
+  balanceNegative: {
+    color: Colors.error,
+  },
+  balancePositive: {
+    color: Colors.success,
+  },
+
+  // Group Card
+  groupCard: {
+    backgroundColor: Colors.card,
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    shadowColor: Colors.shadowColor,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
-    shadowRadius: 5,
+    shadowRadius: 8,
     elevation: 2,
   },
-  avatarContainer: {
+  groupInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  groupIconContainer: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#FFF5F7',
-    alignItems: 'center',
+    backgroundColor: Colors.orangeLight,
     justifyContent: 'center',
-    marginRight: 14,
-    overflow: 'hidden',
+    alignItems: 'center',
   },
-  avatarImage: { width: '100%', height: '100%' },
-  avatarText: { fontSize: 18, fontWeight: 'bold', color: Colors.primary },
-  infoContainer: { flex: 1 },
-  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  name: { fontSize: 16, fontWeight: 'bold', color: Colors.text },
-  statusBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
-  statusBadgeText: { fontSize: 10, fontWeight: 'bold' },
-  subText: { fontSize: 13, color: Colors.textSecondary, marginTop: 2 },
-
-  balanceContainer: { alignItems: 'flex-end', marginRight: 16 },
-  balanceLabel: { fontSize: 10, color: Colors.textSecondary },
-  balanceValue: { fontSize: 16, fontWeight: 'bold' },
-
-  deleteButton: {
-    padding: 8,
+  groupName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.text,
   },
-
-  emptyState: { alignItems: 'center', marginTop: 50 },
-  emptyText: { color: Colors.textSecondary, marginTop: 10, fontSize: 16 },
+  groupSubtext: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  groupBalance: {
+    alignItems: 'flex-end',
+  },
+  balanceValuePositive: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.success,
+  },
 });

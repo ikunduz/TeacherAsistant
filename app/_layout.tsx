@@ -6,10 +6,13 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
+import 'react-native-gesture-handler';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 import { useColorScheme } from '../components/useColorScheme';
 import { Colors } from '../src/constants/Colors';
 import { DataProvider, useData } from '../src/context/DataContext';
+import { SubscriptionProvider } from '../src/context/SubscriptionContext';
 import '../src/i18n/config';
 
 export {
@@ -54,10 +57,12 @@ function RootLayoutNav() {
   const colorScheme = useColorScheme();
 
   return (
-    <DataProvider>
-      {/* useData hook'u ThemeApplier içinde çağrılacak */}
-      <ThemeApplier colorScheme={colorScheme} />
-    </DataProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <DataProvider>
+        {/* useData hook'u ThemeApplier içinde çağrılacak */}
+        <ThemeApplier colorScheme={colorScheme} />
+      </DataProvider>
+    </GestureHandlerRootView>
   );
 }
 
@@ -90,16 +95,31 @@ function ThemeApplier({ colorScheme }: { colorScheme: any }) {
   return (
     <View style={[styles.rootContainer, { backgroundColor: themeBackgroundColor }]}>
       <ThemeProvider value={navigationTheme}>
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="add-student" options={{ presentation: 'modal', headerShown: false }} />
-          <Stack.Screen name="add-group" options={{ presentation: 'modal', headerShown: false }} />
-          <Stack.Screen name="lesson-attendance" options={{ presentation: 'modal', headerShown: false }} />
-          <Stack.Screen name="weekly-schedule" options={{ headerShown: false }} />
-          <Stack.Screen name="student/[id]" options={{ headerShown: false }} />
-          <Stack.Screen name="group/[id]" options={{ headerShown: false }} />
-          <Stack.Screen name="edit-student/[id]" options={{ presentation: 'modal', headerShown: false }} />
-        </Stack>
+        <SubscriptionProvider>
+          <Stack
+            screenOptions={{
+              headerStyle: {
+                backgroundColor: Colors.primary,
+              },
+              headerTintColor: '#fff',
+              headerTitleStyle: {
+                fontWeight: 'bold',
+              },
+            }}
+          >
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="onboarding/language" options={{ headerShown: false }} />
+            <Stack.Screen name="onboarding/category" options={{ headerShown: false }} />
+            <Stack.Screen name="paywall" options={{ presentation: 'modal', headerShown: false }} />
+            <Stack.Screen name="add-student" options={{ presentation: 'modal', headerShown: false }} />
+            <Stack.Screen name="add-group" options={{ presentation: 'modal', headerShown: false }} />
+            <Stack.Screen name="lesson-attendance" options={{ presentation: 'modal', headerShown: false }} />
+            <Stack.Screen name="weekly-schedule" options={{ headerShown: false }} />
+            <Stack.Screen name="student/[id]" options={{ headerShown: false }} />
+            <Stack.Screen name="group/[id]" options={{ headerShown: false }} />
+            <Stack.Screen name="edit-student/[id]" options={{ presentation: 'modal', headerShown: false }} />
+          </Stack>
+        </SubscriptionProvider>
       </ThemeProvider>
     </View>
   );

@@ -1,334 +1,578 @@
-import { Book, Coins, DollarSign, Download, Euro, Globe, GraduationCap, PoundSterling, Save, Upload, User } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { useRouter } from 'expo-router';
+import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
+  Image,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
-  TextInput, TouchableOpacity,
-  View
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { Colors as ThemeColors } from '../../src/constants/Colors';
+import { Colors, ThemePresets } from '../../src/constants/Colors';
 import { useData } from '../../src/context/DataContext';
-import { BackupService } from '../../src/services/backup';
-
-const themeColors = [
-  { key: 'default', color: '#007AFF' },
-  { key: 'rose', color: '#F687B3' },
-  { key: 'emerald', color: '#10B981' },
-  { key: 'amber', color: '#F59E0B' },
-  { key: 'violet', color: '#8B5CF6' },
-  { key: 'slate', color: '#475569' },
-];
+import i18n from '../../src/i18n/config';
+import { StorageService } from '../../src/services/storage';
 
 const currencies = [
-  { label: 'Dollar ($)', value: '$', icon: DollarSign },
-  { label: 'Euro (€)', value: '€', icon: Euro },
-  { label: 'Lira (₺)', value: '₺', icon: Coins },
-  { label: 'Pound (£)', value: '£', icon: PoundSterling },
+  { key: '$', label: 'USD ($)' },
+  { key: '€', label: 'EUR (€)' },
+  { key: '£', label: 'GBP (£)' },
+  { key: '₺', label: 'TRY (₺)' },
 ];
 
 const languages = [
-  { label: 'English', value: 'en' },
-  { label: 'Türkçe', value: 'tr' },
+  { key: 'en', label: 'English' },
+  { key: 'tr', label: 'Türkçe' },
 ];
 
 export default function ProfileScreen() {
-  const { t, i18n } = useTranslation();
-  const { teacher, setTeacher, refreshData, settings, updateSettings } = useData();
+  const { t } = useTranslation();
+  const router = useRouter();
+  const { teacher, settings, setTeacher, updateSettings, refreshData } = useData();
 
+  // Form states
   const [fullName, setFullName] = useState('');
   const [subject, setSubject] = useState('');
-  const [category, setCategory] = useState('');
-  const [selectedColor, setSelectedColor] = useState(ThemeColors.primary);
-  const [selectedCurrency, setSelectedCurrency] = useState('$');
-  const [selectedLanguage, setSelectedLanguage] = useState(i18n.language);
+  const [businessLogo, setBusinessLogo] = useState<string | null>(null);
+  const [selectedColor, setSelectedColor] = useState(Colors.primary);
+  const [usePdfBranding, setUsePdfBranding] = useState(true);
+  const [selectedCurrency, setSelectedCurrency] = useState('USD');
+  const [selectedLanguage, setSelectedLanguage] = useState('en');
+  const [notifications, setNotifications] = useState(false);
 
   useEffect(() => {
-    if (teacher) {
+    // Sadece başlangıçta veya teacher/settings yüklendiğinde bir kez doldur
+    if (teacher && !fullName) {
       setFullName(teacher.fullName || '');
       setSubject(teacher.subject || '');
-      setSelectedColor(teacher.themeColor || ThemeColors.primary);
+      setBusinessLogo(teacher.businessLogo || null);
+      setSelectedColor(teacher.themeColor || Colors.primary);
     }
-    if (settings) {
-      setCategory(settings.instructionCategory || '');
+    if (settings && !selectedCurrency) {
       setSelectedCurrency(settings.currency || '$');
-      setSelectedLanguage(settings.language || i18n.language);
+      setSelectedLanguage(settings.language || 'en');
     }
   }, [teacher, settings]);
 
   const handleSave = async () => {
-    if (!fullName || !subject) {
-      Alert.alert(t('common.error'), t('profile.saveError'));
-      return;
-    }
     try {
       await Promise.all([
-        setTeacher({ fullName, subject, themeColor: selectedColor }),
+        setTeacher({
+          fullName,
+          subject,
+          themeColor: selectedColor,
+          businessLogo: businessLogo || undefined,
+          businessColor: selectedColor,
+        }),
         updateSettings({
           currency: selectedCurrency as any,
-          instructionCategory: category,
-          language: selectedLanguage
-        })
+          language: selectedLanguage,
+        }),
       ]);
-      Alert.alert(t('common.welcome'), t('profile.saveSuccess'));
+      i18n.changeLanguage(selectedLanguage);
+      Alert.alert(t('common.success'), t('profile.saveSuccess'));
     } catch (error) {
       Alert.alert(t('common.error'), t('profile.saveError'));
     }
   };
 
-  const currentThemeColor = selectedColor || ThemeColors.primary;
+  const pickLogo = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.5,
+    });
+    if (!result.canceled) {
+      setBusinessLogo(result.assets[0].uri);
+    }
+  };
+
+  const handleResetData = () => {
+    Alert.alert(
+      t('profile.resetData'),
+      t('profile.resetDataDesc'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('common.delete'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await StorageService.clearAllData();
+              Alert.alert(t('common.success'), t('profile.dataCleared'));
+              refreshData();
+            } catch (e) {
+              Alert.alert(t('common.error'), t('common.error'));
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleSignOut = () => {
+    Alert.alert(
+      t('profile.signOut'),
+      t('profile.signOutDesc'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('profile.signOut'),
+          style: 'destructive',
+          onPress: handleResetData,
+        },
+      ]
+    );
+  };
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { backgroundColor: ThemeColors.card }]}>
-        <Text style={styles.title}>{t('profile.title')} & {t('profile.settings')}</Text>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.formContainer} showsVerticalScrollIndicator={false}>
-        {/* Ad Soyad */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>{t('profile.fullName')}</Text>
-          <View style={styles.inputContainer}>
-            <User size={20} color={ThemeColors.textSecondary} style={styles.icon} />
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. Ayşe Yılmaz"
-              placeholderTextColor="#999"
-              value={fullName}
-              onChangeText={setFullName}
-            />
-          </View>
-        </View>
-
-        {/* Branş */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>{t('profile.subject')}</Text>
-          <View style={styles.inputContainer}>
-            <Book size={20} color={ThemeColors.textSecondary} style={styles.icon} />
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. Mathematics"
-              placeholderTextColor="#999"
-              value={subject}
-              onChangeText={setSubject}
-            />
-          </View>
-        </View>
-
-        {/* Uzmanlık Alanı (Category) */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>{t('profile.instructionCategory')}</Text>
-          <View style={styles.inputContainer}>
-            <GraduationCap size={20} color={ThemeColors.textSecondary} style={styles.icon} />
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. Swimming"
-              placeholderTextColor="#999"
-              value={category}
-              onChangeText={setCategory}
-            />
-          </View>
-        </View>
-
-        {/* Language Selector */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>{t('profile.language')}</Text>
-          <View style={styles.currencyGrid}>
-            {languages.map(lang => (
-              <TouchableOpacity
-                key={lang.value}
-                style={[
-                  styles.currencyOption,
-                  selectedLanguage === lang.value && { backgroundColor: currentThemeColor, borderColor: currentThemeColor }
-                ]}
-                onPress={() => setSelectedLanguage(lang.value)}
-              >
-                <Globe size={18} color={selectedLanguage === lang.value ? '#FFF' : ThemeColors.text} />
-                <Text style={[styles.currencyText, selectedLanguage === lang.value && styles.selectedCurrencyText]}>
-                  {lang.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Currency Selector */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>{t('profile.currency')}</Text>
-          <View style={styles.currencyGrid}>
-            {currencies.map(curr => (
-              <TouchableOpacity
-                key={curr.value}
-                style={[
-                  styles.currencyOption,
-                  selectedCurrency === curr.value && { backgroundColor: currentThemeColor, borderColor: currentThemeColor }
-                ]}
-                onPress={() => setSelectedCurrency(curr.value)}
-              >
-                <curr.icon size={20} color={selectedCurrency === curr.value ? '#FFF' : ThemeColors.text} />
-                <Text style={[styles.currencyText, selectedCurrency === curr.value && styles.selectedCurrencyText]}>
-                  {curr.value}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Renk Seçimi */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>{t('profile.themeColor')}</Text>
-          <View style={styles.colorGrid}>
-            {themeColors.map(theme => (
-              <TouchableOpacity
-                key={theme.key}
-                style={[
-                  styles.colorDot,
-                  { backgroundColor: theme.color },
-                  selectedColor === theme.color && styles.selectedColorDot
-                ]}
-                onPress={() => setSelectedColor(theme.color)}
-              >
-                {selectedColor === theme.color && <View style={styles.colorDotInner} />}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Yedekleme Alanı */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>{t('profile.backupRestoreTitle')}</Text>
-          <View style={styles.backupContainer}>
-            <TouchableOpacity style={styles.backupButton} onPress={() => BackupService.exportData()}>
-              <Download size={20} color={ThemeColors.text} />
-              <Text style={styles.backupButtonText}>{t('profile.backup')}</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.backupButton} onPress={() => BackupService.importData(refreshData)}>
-              <Upload size={20} color={ThemeColors.text} />
-              <Text style={styles.backupButtonText}>{t('profile.restore')}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </ScrollView>
-
-      <View style={styles.footer}>
-        <TouchableOpacity style={[styles.saveButton, { backgroundColor: currentThemeColor }]} onPress={handleSave}>
-          <Save size={20} color="#FFF" />
-          <Text style={styles.saveButtonText}>{t('common.save')}</Text>
+      {/* iOS-style Nav Bar */}
+      <View style={styles.navbar}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.navButton}>
+          <ChevronLeft size={24} color={Colors.iosBlue} />
+        </TouchableOpacity>
+        <Text style={styles.navTitle}>{t('profile.title')}</Text>
+        <TouchableOpacity onPress={handleSave} style={styles.navButton}>
+          <Text style={styles.doneButton}>{t('common.save')}</Text>
         </TouchableOpacity>
       </View>
+
+      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+        {/* Teacher Info Section */}
+        <Text style={styles.sectionHeader}>{t('profile.teacherInfo').toUpperCase()}</Text>
+        <View style={styles.card}>
+          {/* Avatar Row */}
+          <TouchableOpacity style={styles.avatarRow} onPress={pickLogo}>
+            {businessLogo ? (
+              <Image source={{ uri: businessLogo }} style={styles.avatar} />
+            ) : (
+              <Image
+                source={require('../../assets/images/icon.png')}
+                style={styles.avatar}
+                resizeMode="contain"
+              />
+            )}
+            <View style={styles.avatarInfo}>
+              <Text style={styles.avatarName}>{fullName || t('profile.fullName')}</Text>
+              <Text style={styles.avatarSub}>{subject || t('profile.subject')}</Text>
+            </View>
+          </TouchableOpacity>
+
+          {/* Full Name Row */}
+          <View style={styles.listItem}>
+            <Text style={styles.listItemText}>{t('profile.fullName')}</Text>
+            <TextInput
+              style={styles.listInput}
+              value={fullName}
+              onChangeText={setFullName}
+              placeholder={t('profile.fullName')}
+              placeholderTextColor={Colors.textMuted}
+              textAlign="right"
+            />
+          </View>
+
+          {/* Subject Row */}
+          <View style={styles.listItem}>
+            <Text style={styles.listItemText}>{t('profile.subject')}</Text>
+            <TextInput
+              style={styles.listInput}
+              value={subject}
+              onChangeText={setSubject}
+              placeholder={t('profile.subject')}
+              placeholderTextColor={Colors.textMuted}
+              textAlign="right"
+            />
+          </View>
+        </View>
+
+        {/* Branding Section */}
+        <Text style={styles.sectionHeader}>{t('profile.branding').toUpperCase()}</Text>
+        <View style={styles.card}>
+          {/* Upload Business Logo */}
+          <TouchableOpacity style={styles.listItem} onPress={pickLogo}>
+            <Text style={styles.listItemText}>{t('profile.uploadLogo')}</Text>
+            <View style={styles.logoPreview}>
+              {businessLogo ? (
+                <Image source={{ uri: businessLogo }} style={styles.logoThumb} />
+              ) : (
+                <Image
+                  source={require('../../assets/images/icon.png')}
+                  style={styles.logoThumb}
+                  resizeMode="contain"
+                />
+              )}
+            </View>
+          </TouchableOpacity>
+
+          {/* Select Brand Color */}
+          <View style={styles.listItem}>
+            <Text style={styles.listItemText}>{t('profile.selectColor')}</Text>
+            <View style={styles.colorSwatches}>
+              {ThemePresets.slice(0, 4).map((preset) => (
+                <TouchableOpacity
+                  key={preset.key}
+                  style={[
+                    styles.colorSwatch,
+                    { backgroundColor: preset.color },
+                    selectedColor === preset.color && styles.colorSwatchSelected,
+                  ]}
+                  onPress={() => setSelectedColor(preset.color)}
+                />
+              ))}
+            </View>
+          </View>
+
+          {/* Use on PDF Reports */}
+          <View style={styles.listItem}>
+            <Text style={styles.listItemText}>{t('profile.usePdfReports')}</Text>
+            <Switch
+              value={usePdfBranding}
+              onValueChange={setUsePdfBranding}
+              trackColor={{ false: '#E9E9EA', true: Colors.iosGreen }}
+              thumbColor="#FFF"
+            />
+          </View>
+        </View>
+
+        {/* Localization Section */}
+        <Text style={styles.sectionHeader}>{t('profile.localization').toUpperCase()}</Text>
+        <View style={styles.card}>
+          <View style={styles.localizationRow}>
+            {/* Currency */}
+            <View style={styles.localizationColumn}>
+              <Text style={styles.localizationLabel}>{t('profile.currency')}</Text>
+              <View style={styles.segmentedControl}>
+                {currencies.slice(0, 4).map((c) => (
+                  <TouchableOpacity
+                    key={c.key}
+                    style={[
+                      styles.segmentButton,
+                      selectedCurrency === c.key && styles.segmentButtonActive,
+                    ]}
+                    onPress={() => setSelectedCurrency(c.key)}
+                  >
+                    <Text
+                      style={[
+                        styles.segmentText,
+                        selectedCurrency === c.key && styles.segmentTextActive,
+                      ]}
+                    >
+                      {c.key}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Divider */}
+            <View style={styles.localizationDivider} />
+
+            {/* Language */}
+            <View style={styles.localizationColumn}>
+              <Text style={styles.localizationLabel}>{t('profile.language')}</Text>
+              <View style={styles.segmentedControl}>
+                {languages.map((l) => (
+                  <TouchableOpacity
+                    key={l.key}
+                    style={[
+                      styles.segmentButton,
+                      selectedLanguage === l.key && styles.segmentButtonActive,
+                    ]}
+                    onPress={() => {
+                      setSelectedLanguage(l.key);
+                      i18n.changeLanguage(l.key);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.segmentText,
+                        selectedLanguage === l.key && styles.segmentTextActive,
+                      ]}
+                    >
+                      {l.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* App Preferences Section */}
+        <Text style={styles.sectionHeader}>{t('profile.preferences').toUpperCase()}</Text>
+        <View style={styles.card}>
+          {/* Notifications */}
+          <View style={styles.listItem}>
+            <Text style={styles.listItemText}>{t('profile.notifications')}</Text>
+            <Switch
+              value={notifications}
+              onValueChange={setNotifications}
+              trackColor={{ false: '#E9E9EA', true: Colors.iosGreen }}
+              thumbColor="#FFF"
+            />
+          </View>
+
+          {/* Privacy & Security */}
+          <TouchableOpacity
+            style={styles.listItem}
+            onPress={() => Alert.alert(t('profile.privacy'), t('common.noData'))}
+          >
+            <Text style={styles.listItemText}>{t('profile.privacy')}</Text>
+            <ChevronRight size={20} color={Colors.iosSeparator} />
+          </TouchableOpacity>
+
+          {/* Help & Support */}
+          <TouchableOpacity
+            style={styles.listItem}
+            onPress={() => router.push('/help')}
+          >
+            <Text style={styles.listItemText}>{t('profile.help')}</Text>
+            <ChevronRight size={20} color={Colors.iosSeparator} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Sign Out Button */}
+        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+          <Text style={styles.signOutText}>{t('profile.signOut')}</Text>
+        </TouchableOpacity>
+
+        <View style={{ height: 100 }} />
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: ThemeColors.background },
-  header: {
-    backgroundColor: ThemeColors.card,
-    paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: ThemeColors.border,
+  container: {
+    flex: 1,
+    backgroundColor: Colors.iosBg,
   },
-  title: { fontSize: 24, fontWeight: '900', color: ThemeColors.text, textAlign: 'center' },
-  formContainer: { padding: 24 },
-  inputGroup: { marginBottom: 24 },
-  label: { fontSize: 13, fontWeight: '700', color: ThemeColors.textSecondary, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 },
-  inputContainer: {
+
+  // Navbar
+  navbar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: ThemeColors.card,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: ThemeColors.border,
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
+    paddingTop: 50,
+    paddingBottom: 12,
+    backgroundColor: Colors.iosBg,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.iosSeparator,
   },
-  icon: { marginRight: 12 },
-  input: { flex: 1, paddingVertical: 14, fontSize: 16, color: ThemeColors.text, fontWeight: '500' },
-  currencyGrid: {
-    flexDirection: 'row',
-    gap: 10,
-    flexWrap: 'wrap',
+  navButton: {
+    padding: 4,
   },
-  currencyOption: {
-    flex: 1,
-    minWidth: '45%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: ThemeColors.card,
-    paddingVertical: 12,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: ThemeColors.border,
-    gap: 6,
+  navTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: Colors.text,
   },
-  currencyText: {
-    fontSize: 16,
+  doneButton: {
+    fontSize: 17,
     fontWeight: '700',
-    color: ThemeColors.text,
+    color: Colors.iosBlue,
   },
-  selectedCurrencyText: {
-    color: '#FFF',
-  },
-  colorGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  colorDot: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  selectedColorDot: {
-    borderWidth: 3,
-    borderColor: ThemeColors.text,
-  },
-  colorDotInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#FFF',
-  },
-  backupContainer: { flexDirection: 'row', gap: 12 },
-  backupButton: {
+
+  // Content
+  content: {
     flex: 1,
+  },
+  contentContainer: {
+    paddingVertical: 24,
+  },
+
+  // Section Header
+  sectionHeader: {
+    fontSize: 13,
+    fontWeight: '400',
+    color: '#6D6D72',
+    marginHorizontal: 16,
+    marginBottom: 8,
+    letterSpacing: 0.5,
+  },
+
+  // Card
+  card: {
+    backgroundColor: Colors.card,
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginBottom: 32,
+    overflow: 'hidden',
+    shadowColor: Colors.shadowColor,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+
+  // Avatar Row
+  avatarRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: ThemeColors.card,
     padding: 16,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: ThemeColors.border,
-    gap: 10,
+    gap: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E5E5EA',
   },
-  backupButtonText: { fontSize: 14, color: ThemeColors.text, fontWeight: '700' },
-  footer: {
-    padding: 24,
-    paddingBottom: 40,
-    backgroundColor: ThemeColors.card,
-    borderTopWidth: 1,
-    borderTopColor: ThemeColors.border,
+  avatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
   },
-  saveButton: {
-    padding: 18,
-    borderRadius: 20,
-    alignItems: 'center',
+  avatarPlaceholder: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#E5E5EA',
     justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 10,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    alignItems: 'center',
   },
-  saveButtonText: { color: '#FFF', fontSize: 16, fontWeight: '800', letterSpacing: 0.5 },
+  avatarInfo: {
+    flex: 1,
+  },
+  avatarName: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+  avatarSub: {
+    fontSize: 15,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+
+  // List Item
+  listItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    height: 48,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E5E5EA',
+  },
+  listItemText: {
+    fontSize: 17,
+    color: Colors.text,
+  },
+  listInput: {
+    flex: 1,
+    fontSize: 17,
+    color: Colors.textSecondary,
+    marginLeft: 16,
+    paddingVertical: 8,
+  },
+
+  // Logo Preview
+  logoPreview: {
+    width: 32,
+    height: 32,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  logoThumb: {
+    width: 32,
+    height: 32,
+  },
+  logoPlaceholder: {
+    width: 32,
+    height: 32,
+    backgroundColor: '#E5E5EA',
+    borderRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // Color Swatches
+  colorSwatches: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  colorSwatch: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+  },
+  colorSwatchSelected: {
+    borderWidth: 2,
+    borderColor: Colors.iosBlue,
+  },
+
+  // Localization
+  localizationRow: {
+    flexDirection: 'row',
+    padding: 16,
+  },
+  localizationColumn: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  localizationDivider: {
+    width: 1,
+    backgroundColor: '#E5E5EA',
+    marginHorizontal: 8,
+  },
+  localizationLabel: {
+    fontSize: 15,
+    color: Colors.text,
+    marginBottom: 8,
+  },
+
+  // Segmented Control
+  segmentedControl: {
+    flexDirection: 'row',
+    backgroundColor: '#EEEFF4',
+    borderRadius: 8,
+    padding: 2,
+    width: '100%',
+  },
+  segmentButton: {
+    flex: 1,
+    paddingVertical: 6,
+    alignItems: 'center',
+    borderRadius: 6,
+  },
+  segmentButtonActive: {
+    backgroundColor: Colors.card,
+    shadowColor: Colors.shadowColor,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.12,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  segmentText: {
+    fontSize: 13,
+    color: Colors.text,
+  },
+  segmentTextActive: {
+    fontWeight: '500',
+  },
+
+  // Sign Out Button
+  signOutButton: {
+    backgroundColor: Colors.card,
+    borderRadius: 12,
+    marginHorizontal: 16,
+    paddingVertical: 14,
+    alignItems: 'center',
+    shadowColor: Colors.shadowColor,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  signOutText: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: Colors.iosRed,
+  },
 });

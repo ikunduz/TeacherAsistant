@@ -1,62 +1,85 @@
-// FinalTeacher Renk Paleti
-// Modern, temiz, yumuşak ve kullanıcı dostu tasarım
-
+/**
+ * Premium Design System Colors
+ * Based on the new CoachPro design mockups
+ */
 export const Colors = {
-  // Ana Renkler
-  primary: '#F687B3',        // Canlı pastel pembe - Butonlar, başlıklar, ikonlar
-  background: '#FFF5F7',     // Çok açık pembe/beyaz - Sayfa zeminleri
-  card: '#FFFFFF',           // Bembeyaz - Kartlar
+  // Primary palette
+  primary: '#5B93FF',      // Main blue
+  primaryLight: '#E0F2FE',
+  primaryDark: '#0284C7',
 
-  // Durum Renkleri
-  success: '#48BB78',        // Canlı yeşil - Ders Yapıldı, Ödendi, tik işaretleri
-  warning: '#ECC94B',        // Sarı - Uyarılar
-  error: '#FC8181',          // Açık kırmızı - Hatalar
-  danger: '#FC8181',         // Açık kırmızı - Tehlikeli işlemler (error ile aynı)
-  info: '#63B3ED',           // Açık mavi - Bilgilendirme
+  // Background colors
+  background: '#F8F9FB',
+  card: '#FFFFFF',
 
-  // Metin Renkleri
-  text: '#2D3748',           // Koyu gri - Ana metin (asla #000 kullanma)
-  textSecondary: '#718096',  // Orta gri - İkincil metin
-  textLight: '#A0AEC0',      // Açık gri - Placeholder
+  // Text colors
+  text: '#1F2937',
+  textSecondary: '#6B7280',
+  textMuted: '#9CA3AF',
 
-  // Input & Border
-  border: '#E2E8F0',         // Gri kenarlık
-  inputBackground: '#FFFFFF', // Input arka planı
+  // Status colors
+  success: '#10B981',
+  successLight: '#D1FAE5',
+  successDark: '#065F46',
 
-  // Gölge (iOS)
-  shadow: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-  },
+  error: '#EF4444',
+  errorLight: '#FEE2E2',
 
-  // Elevation (Android)
-  elevation: 4,
+  warning: '#F59E0B',
+  warningLight: '#FEF3C7',
 
-  // Border Radius
-  borderRadius: {
-    small: 8,
-    medium: 16,
-    large: 20,
-    full: 9999,
-  },
+  // Accent colors for cards/badges
+  purple: '#8B5CF6',
+  purpleLight: '#E9D5FF',
+  purpleDark: '#6B21A8',
+
+  orange: '#F97316',
+  orangeLight: '#FFEDD5',
+
+  cyan: '#06B6D4',
+  cyanLight: '#CFFAFE',
+
+  // Border colors
+  border: '#E5E7EB',
+  borderLight: '#F3F4F6',
+
+  // iOS specific
+  iosBg: '#F2F2F7',
+  iosBlue: '#007AFF',
+  iosRed: '#FF3B30',
+  iosGreen: '#34C759',
+  iosGray: '#8E8E93',
+  iosSeparator: '#C6C6C8',
+
+  // Shadow
+  shadowColor: '#000000',
 };
 
-// Tema sabitleri (eski yapıyla uyumluluk için)
-export default {
-  light: {
-    text: Colors.text,
-    background: Colors.background,
-    tint: Colors.primary,
-    tabIconDefault: Colors.textLight,
-    tabIconSelected: Colors.primary,
-  },
-  dark: {
-    text: '#FFFFFF',
-    background: '#1A202C',
-    tint: Colors.primary,
-    tabIconDefault: '#718096',
-    tabIconSelected: Colors.primary,
-  },
+// Badge/Tag colors
+export const TagColors = {
+  advanced: { bg: '#E9D5FF', text: '#6B21A8' },
+  beginner: { bg: '#D1FAE5', text: '#065F46' },
+  intermediate: { bg: '#FEF3C7', text: '#92400E' },
+  onhold: { bg: '#FEE2E2', text: '#991B1B' },
+  pro: { bg: '#E0F2FE', text: '#0284C7' },
 };
+
+// Filter/Tab colors
+export const FilterColors = {
+  thisMonth: { bg: '#E9D8FD', text: '#553C9A' },
+  lastMonth: { bg: '#B2F5EA', text: '#285E61' },
+  thisQuarter: { bg: '#FEFCBF', text: '#975A16' },
+  thisYear: { bg: '#FED7D7', text: '#9B2C2C' },
+};
+
+// Theme colors for user selection
+export const ThemePresets = [
+  { key: 'blue', color: '#5B93FF' },
+  { key: 'purple', color: '#8B5CF6' },
+  { key: 'green', color: '#10B981' },
+  { key: 'orange', color: '#F97316' },
+  { key: 'cyan', color: '#06B6D4' },
+  { key: 'pink', color: '#EC4899' },
+];
+
+export default Colors;

@@ -1,14 +1,30 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Localization from 'expo-localization';
 import { useRouter } from 'expo-router';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import i18n from '../i18n/config';
 import { StorageService } from '../services/storage';
-import { AttendanceItem, Group, Lesson, Payment, Student, Teacher } from '../types';
+import { AttendanceItem, AvailabilitySlot, Group, Lesson, Metric, MetricValue, Payment, Student, Teacher } from '../types';
+
+// Cihaz diline göre varsayılan para birimi
+const getDefaultCurrency = (): '$' | '€' | '₺' | '£' => {
+  const locales = Localization.getLocales();
+  if (locales && locales.length > 0) {
+    const langCode = locales[0].languageCode;
+    if (langCode === 'tr') return '₺';
+    if (langCode === 'de' || langCode === 'fr' || langCode === 'es' || langCode === 'it') return '€';
+    if (langCode === 'en' && locales[0].regionCode === 'GB') return '£';
+  }
+  return '$'; // Default: USD
+};
 
 interface AppSettings {
   currency: '$' | '€' | '₺' | '£';
   instructionCategory: string;
   language: string;
+  taxRate: number;
+  defaultMeetingLink: string;
+  availability: AvailabilitySlot[];
 }
 
 interface DataContextType {
@@ -29,6 +45,11 @@ interface DataContextType {
   addBatchLessons: (lessons: Lesson[]) => Promise<void>;
   addPayment: (payment: Payment) => Promise<void>;
   updateSettings: (settings: Partial<AppSettings>) => Promise<void>;
+  addPackage: (studentId: string, count: number, totalAmount: number, paymentMethod?: string) => Promise<void>;
+  addMetric: (studentId: string, name: string, type: 'star' | 'numeric' | 'percentage') => Promise<void>;
+  updateMetricScore: (studentId: string, metricId: string, score: number) => Promise<void>;
+  updateEvaluationNote: (studentId: string, note: string) => Promise<void>;
+  deleteMetric: (studentId: string, metricId: string) => Promise<void>;
   refreshData: () => Promise<void>;
   getStudentsByGroupId: (groupId: string) => Student[];
   takeAttendance: (groupId: string, date: string, topic: string, attendanceList: AttendanceItem[]) => Promise<void>;
@@ -43,7 +64,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
-  const [settings, setSettingsState] = useState<AppSettings>({ currency: '$', instructionCategory: '', language: 'en' });
+  const [settings, setSettingsState] = useState<AppSettings>({
+    currency: getDefaultCurrency(),
+    instructionCategory: '',
+    language: 'en',
+    taxRate: 0,
+    defaultMeetingLink: '',
+    availability: []
+  });
   const [loading, setLoading] = useState(true);
 
   const loadData = async () => {
@@ -61,20 +89,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setLessons(l);
       setPayments(p);
       setGroups(g || []);
-      if (sets) {
+      if (sets && sets.language && sets.instructionCategory) {
         setSettingsState(sets);
-        if (sets.language) i18n.changeLanguage(sets.language);
+        i18n.changeLanguage(sets.language);
       } else {
-        // First launch or no settings, check AsyncStorage for language
         const savedLang = await AsyncStorage.getItem('@app_language');
         if (savedLang) {
           setSettingsState(prev => ({ ...prev, language: savedLang }));
           i18n.changeLanguage(savedLang);
+          if (!sets?.instructionCategory) {
+            setTimeout(() => router.push('/onboarding/category' as any), 500);
+          }
         } else {
-          // Redirect to language onboarding
-          setTimeout(() => {
-            router.push('/onboarding/language');
-          }, 100);
+          setTimeout(() => router.push('/onboarding/language' as any), 500);
         }
       }
     } catch (e) { console.error(e); } finally { setLoading(false); }
@@ -83,8 +110,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
   useEffect(() => { loadData(); }, []);
 
   const setTeacher = async (v: Teacher) => { await StorageService.saveTeacher(v); setTeacherState(v); };
-  const addStudent = async (v: Student) => { const n = [...students, v]; await StorageService.saveStudents(n); setStudents(n); };
-  const updateStudent = async (v: Student) => { const n = students.map(s => s.id === v.id ? v : s); await StorageService.saveStudents(n); setStudents(n); };
+
+  const addStudent = async (v: Student) => {
+    const studentWithMetrics = { ...v, metrics: v.metrics || [] };
+    const n = [...students, studentWithMetrics];
+    await StorageService.saveStudents(n);
+    setStudents(n);
+  };
+
+  const updateStudent = async (v: Student) => {
+    const n = students.map(s => s.id === v.id ? v : s);
+    await StorageService.saveStudents(n);
+    setStudents(n);
+  };
+
   const deleteStudent = async (id: string) => {
     const ns = students.filter(s => s.id !== id);
     const ng = groups.map(g => ({ ...g, studentIds: g.studentIds.filter(x => x !== id) }));
@@ -93,32 +132,51 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setStudents(ns);
     setGroups(ng);
   };
+
   const addGroup = async (v: Group) => { const n = [...groups, v]; await StorageService.saveGroups(n); setGroups(n); };
   const deleteGroup = async (id: string) => { const n = groups.filter(g => g.id !== id); await StorageService.saveGroups(n); setGroups(n); };
+
   const addLesson = async (v: Lesson) => {
     const nl = [...lessons, v];
     await StorageService.saveLessons(nl);
     setLessons(nl);
     const s = students.find(x => x.id === v.studentId);
-    if (s) await updateStudent({ ...s, balance: s.balance + v.fee, lastTopic: v.topic || s.lastTopic });
+    if (s) {
+      if (s.remainingLessons > 0) {
+        await updateStudent({ ...s, remainingLessons: s.remainingLessons - 1, lastTopic: v.topic || s.lastTopic });
+      } else {
+        await updateStudent({ ...s, balance: s.balance + v.fee, lastTopic: v.topic || s.lastTopic });
+      }
+    }
   };
+
   const addBatchLessons = async (newLessons: Lesson[]) => {
     const nl = [...lessons, ...newLessons];
     const tempStudents = [...students];
     newLessons.forEach(l => {
       const idx = tempStudents.findIndex(s => s.id === l.studentId);
       if (idx > -1) {
-        tempStudents[idx] = {
-          ...tempStudents[idx],
-          balance: tempStudents[idx].balance + l.fee,
-          lastTopic: l.topic || tempStudents[idx].lastTopic
-        };
+        const s = tempStudents[idx];
+        if (s.remainingLessons > 0) {
+          tempStudents[idx] = {
+            ...s,
+            remainingLessons: s.remainingLessons - 1,
+            lastTopic: l.topic || s.lastTopic
+          };
+        } else {
+          tempStudents[idx] = {
+            ...s,
+            balance: s.balance + l.fee,
+            lastTopic: l.topic || s.lastTopic
+          };
+        }
       }
     });
     await Promise.all([StorageService.saveLessons(nl), StorageService.saveStudents(tempStudents)]);
     setLessons(nl);
     setStudents(tempStudents);
   };
+
   const addPayment = async (v: Payment) => {
     const np = [...payments, v];
     await StorageService.savePayments(np);
@@ -131,6 +189,63 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const updated = { ...settings, ...newSettings };
     await StorageService.saveSettings(updated);
     setSettingsState(updated);
+  };
+
+  const addPackage = async (studentId: string, count: number, totalAmount: number, paymentMethod?: string) => {
+    const s = students.find(x => x.id === studentId);
+    if (!s) return;
+
+    // Paket peşin ödeme olduğu için:
+    // 1. Mevcut bakiye varsa sıfırla (paket ücreti borcu kapattı)
+    // 2. remainingLessons artır
+    const updatedStudent = {
+      ...s,
+      remainingLessons: s.remainingLessons + count,
+      balance: 0  // Paket peşin ödendiği için bakiye sıfırlanır
+    };
+    await updateStudent(updatedStudent);
+
+    if (totalAmount > 0) {
+      await addPayment({
+        id: Date.now().toString(),
+        studentId,
+        studentName: s.fullName,
+        amount: totalAmount,
+        date: new Date().toISOString(),
+        paymentMethod: paymentMethod as any || 'Other',
+      });
+    }
+  };
+
+  const addMetric = async (studentId: string, name: string, type: 'star' | 'numeric' | 'percentage') => {
+    const s = students.find(x => x.id === studentId);
+    if (!s) return;
+    const newMetric: Metric = { id: Date.now().toString(), name, type, values: [] };
+    const updatedStudent = { ...s, metrics: [...(s.metrics || []), newMetric] };
+    await updateStudent(updatedStudent);
+  };
+
+  const updateMetricScore = async (studentId: string, metricId: string, score: number) => {
+    const s = students.find(x => x.id === studentId);
+    if (!s) return;
+    const newValue: MetricValue = { date: new Date().toISOString(), score };
+    const updatedMetrics = (s.metrics || []).map(m =>
+      m.id === metricId ? { ...m, values: [...(m.values || []), newValue] } : m
+    );
+    await updateStudent({ ...s, metrics: updatedMetrics });
+  };
+
+  const updateEvaluationNote = async (studentId: string, note: string) => {
+    const s = students.find(x => x.id === studentId);
+    if (!s) return;
+    await updateStudent({ ...s, evaluationNote: note });
+  };
+
+  const deleteMetric = async (studentId: string, metricId: string) => {
+    const s = students.find(x => x.id === studentId);
+    if (!s) return;
+    const updatedMetrics = (s.metrics || []).filter(m => m.id !== metricId);
+    await updateStudent({ ...s, metrics: updatedMetrics });
   };
 
   const refreshData = async () => { await loadData(); };
@@ -159,7 +274,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     <DataContext.Provider value={{
       teacher, students, lessons, payments, groups, settings, loading,
       setTeacher, addStudent, updateStudent, deleteStudent,
-      addGroup, deleteGroup, addLesson, addBatchLessons, addPayment, updateSettings, refreshData,
+      addGroup, deleteGroup, addLesson, addBatchLessons, addPayment, updateSettings, addPackage,
+      addMetric, updateMetricScore, updateEvaluationNote, deleteMetric, refreshData,
       getStudentsByGroupId, takeAttendance
     }}>
       {children}

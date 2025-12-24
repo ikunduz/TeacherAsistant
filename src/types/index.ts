@@ -2,11 +2,26 @@ export interface Teacher {
   fullName: string;
   subject: string;
   themeColor?: string; // İsteğe bağlı tema rengi
+  businessLogo?: string;
+  businessColor?: string;
 }
 
 export interface ScheduleItem {
   day: number; // 0: Pazar, 1: Pazartesi, ..., 6: Cumartesi
   time: string; // "HH:mm" formatında
+  lessonType?: 'FaceToFace' | 'Online';
+}
+
+export interface MetricValue {
+  date: string;
+  score: number;
+}
+
+export interface Metric {
+  id: string;
+  name: string;
+  type: 'star' | 'numeric' | 'percentage';
+  values: MetricValue[];
 }
 
 export interface Student {
@@ -24,6 +39,10 @@ export interface Student {
   schedule?: ScheduleItem[];
   image?: string | null;
   statusTag?: 'Beginner' | 'Intermediate' | 'Advanced' | 'On Hold';
+  remainingLessons: number;
+  metrics: Metric[];
+  evaluationNote?: string;
+  customMeetingLink?: string;
 }
 
 export interface Group {
@@ -43,6 +62,15 @@ export interface Lesson {
   topic?: string;
   type: 'individual' | 'group';
   groupId?: string;
+  lessonType?: 'FaceToFace' | 'Online';
+}
+
+export interface AvailabilitySlot {
+  id: string;
+  day: number; // 0-6
+  startTime: string; // HH:mm
+  endTime: string; // HH:mm
+  isAvailable: boolean;
 }
 
 export interface Payment {
@@ -51,6 +79,7 @@ export interface Payment {
   studentName: string;
   amount: number;
   date: string;
+  paymentMethod?: 'Cash' | 'Bank Transfer' | 'Card' | 'Other';
 }
 
 // Lesson attendance types

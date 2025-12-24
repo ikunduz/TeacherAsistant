@@ -1,5 +1,5 @@
 import { Stack, useRouter } from 'expo-router';
-import { ArrowLeft, Clock, User, Users } from 'lucide-react-native';
+import { ChevronLeft, Clock, Home, User, Users, Video } from 'lucide-react-native';
 import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -11,12 +11,15 @@ interface ScheduledItem {
   time: string;
   day: number;
   type: 'individual' | 'group';
+  lessonType?: 'FaceToFace' | 'Online';
 }
 
 export default function WeeklyScheduleScreen() {
   const { t } = useTranslation();
-  const { students, groups } = useData();
+  const { students, groups, teacher } = useData();
   const router = useRouter();
+
+  const themeColor = teacher?.themeColor || Colors.primary;
 
   const weekDays = [
     { label: t('onboarding.days.mon'), value: 1 },
@@ -37,6 +40,7 @@ export default function WeeklyScheduleScreen() {
           time: sc.time,
           day: sc.day,
           type: 'individual',
+          lessonType: sc.lessonType
         });
       });
     });
@@ -47,50 +51,84 @@ export default function WeeklyScheduleScreen() {
           time: sc.time,
           day: sc.day,
           type: 'group',
+          lessonType: sc.lessonType
         });
       });
     });
     return allItems.sort((a, b) => a.time.localeCompare(b.time));
   }, [students, groups]);
 
+  const hasSchedule = schedule.length > 0;
+
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
+
+      {/* iOS-style Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ArrowLeft size={24} color={Colors.text} />
+          <ChevronLeft size={24} color={Colors.iosBlue} />
         </TouchableOpacity>
-        <Text style={styles.title}>{t('dashboard.weeklySchedule')}</Text>
+        <Text style={styles.headerTitle}>{t('dashboard.weeklySchedule')}</Text>
+        <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {weekDays.map(day => {
-          const dayLessons = schedule.filter(item => item.day === day.value);
-          if (dayLessons.length === 0) return null;
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+        {!hasSchedule ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>{t('common.noData')}</Text>
+          </View>
+        ) : (
+          weekDays.map(day => {
+            const dayLessons = schedule.filter(item => item.day === day.value);
+            if (dayLessons.length === 0) return null;
 
-          return (
-            <View key={day.value} style={styles.dayContainer}>
-              <Text style={styles.dayTitle}>{day.label}</Text>
-              {dayLessons.map((item, index) => (
-                <View key={index} style={styles.lessonCard}>
-                  <View style={styles.timeContainer}>
-                    <Clock size={16} color={Colors.primary} />
-                    <Text style={styles.timeText}>{item.time}</Text>
-                  </View>
-                  <View style={styles.lessonInfo}>
-                    <Text style={styles.lessonName}>{item.name}</Text>
-                    <View style={styles.lessonTypeContainer}>
-                      {item.type === 'individual' ? <User size={14} color={Colors.textSecondary} /> : <Users size={14} color={Colors.textSecondary} />}
-                      <Text style={styles.lessonTypeText}>
-                        {item.type === 'individual' ? t('students.individuals') : t('students.groups')}
-                      </Text>
+            return (
+              <View key={day.value}>
+                <Text style={styles.sectionHeader}>{day.label.toUpperCase()}</Text>
+                <View style={styles.card}>
+                  {dayLessons.map((item, index) => (
+                    <View key={index}>
+                      <View style={styles.lessonRow}>
+                        <View style={styles.timeColumn}>
+                          <Clock size={16} color={themeColor} />
+                          <Text style={[styles.timeText, { color: themeColor }]}>{item.time}</Text>
+                        </View>
+                        <View style={styles.divider} />
+                        <View style={styles.lessonInfo}>
+                          <Text style={styles.lessonName}>{item.name}</Text>
+                          <View style={styles.tagsRow}>
+                            <View style={[styles.tag, { backgroundColor: item.type === 'group' ? Colors.orangeLight : Colors.primaryLight }]}>
+                              {item.type === 'group' ? (
+                                <Users size={12} color={Colors.orange} />
+                              ) : (
+                                <User size={12} color={themeColor} />
+                              )}
+                              <Text style={[styles.tagText, { color: item.type === 'group' ? Colors.orange : themeColor }]}>
+                                {item.type === 'group' ? t('students.groups') : t('students.individuals')}
+                              </Text>
+                            </View>
+                            <View style={[styles.tag, { backgroundColor: Colors.successLight }]}>
+                              {item.lessonType === 'Online' ? (
+                                <Video size={12} color={Colors.success} />
+                              ) : (
+                                <Home size={12} color={Colors.success} />
+                              )}
+                              <Text style={[styles.tagText, { color: Colors.success }]}>
+                                {item.lessonType === 'Online' ? t('students.online') : t('students.faceToFace')}
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
+                      </View>
+                      {index < dayLessons.length - 1 && <View style={styles.separator} />}
                     </View>
-                  </View>
+                  ))}
                 </View>
-              ))}
-            </View>
-          );
-        })}
+              </View>
+            );
+          })
+        )}
         <View style={{ height: 40 }} />
       </ScrollView>
     </View>
@@ -98,62 +136,116 @@ export default function WeeklyScheduleScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+  container: {
+    flex: 1,
+    backgroundColor: Colors.iosBg,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 20,
-    backgroundColor: Colors.card,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 50,
+    paddingBottom: 12,
+    backgroundColor: Colors.iosBg,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.iosSeparator,
   },
-  backButton: { marginRight: 16 },
-  title: { fontSize: 20, fontWeight: 'bold', color: Colors.text },
-  dayContainer: {
-    paddingHorizontal: 24,
-    marginTop: 20,
+  backButton: {
+    padding: 4,
   },
-  dayTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+  headerTitle: {
+    fontSize: 17,
+    fontWeight: '600',
     color: Colors.text,
-    marginBottom: 12,
   },
-  lessonCard: {
-    backgroundColor: Colors.card,
-    borderRadius: 16,
+  content: {
     padding: 16,
+  },
+
+  // Empty State
+  emptyState: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 15,
+    color: Colors.textMuted,
+    fontStyle: 'italic',
+  },
+
+  // Section Header
+  sectionHeader: {
+    fontSize: 13,
+    fontWeight: '400',
+    color: '#6D6D72',
+    marginHorizontal: 4,
+    marginBottom: 8,
+    marginTop: 20,
+    letterSpacing: 0.5,
+  },
+
+  // Card
+  card: {
+    backgroundColor: Colors.card,
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: Colors.shadowColor,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+
+  // Lesson Row
+  lessonRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    padding: 16,
   },
-  timeContainer: {
+  timeColumn: {
     alignItems: 'center',
-    marginRight: 16,
-    paddingRight: 16,
-    borderRightWidth: 1,
-    borderRightColor: Colors.border,
+    width: 60,
+    gap: 4,
   },
   timeText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: Colors.primary,
-    marginTop: 4,
+    fontSize: 16,
+    fontWeight: '700',
   },
-  lessonInfo: { flex: 1 },
+  divider: {
+    width: 1,
+    height: 40,
+    backgroundColor: Colors.iosSeparator,
+    marginHorizontal: 16,
+  },
+  lessonInfo: {
+    flex: 1,
+  },
   lessonName: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
     color: Colors.text,
+    marginBottom: 8,
   },
-  lessonTypeContainer: {
+  tagsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  tag: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 6,
-    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
   },
-  lessonTypeText: {
-    fontSize: 13,
-    color: Colors.textSecondary,
+  tagText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  separator: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: Colors.iosSeparator,
+    marginLeft: 92,
   },
 });
