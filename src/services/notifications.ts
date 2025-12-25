@@ -1,4 +1,5 @@
 import * as Notifications from 'expo-notifications';
+import { Platform } from 'react-native';
 import { Student } from '../types';
 
 Notifications.setNotificationHandler({
@@ -10,6 +11,28 @@ Notifications.setNotificationHandler({
         shouldShowList: true,
     }),
 });
+
+// Belirli bir gün ve saate kadar kalan saniyeyi hesapla
+function getSecondsUntilNextOccurrence(targetDay: number, targetHour: number, targetMinute: number): number {
+    const now = new Date();
+    const currentDay = now.getDay(); // 0: Pazar, 1: Pazartesi...
+
+    let daysUntil = targetDay - currentDay;
+    if (daysUntil < 0) {
+        daysUntil += 7;
+    }
+
+    const targetDate = new Date(now);
+    targetDate.setDate(now.getDate() + daysUntil);
+    targetDate.setHours(targetHour, targetMinute, 0, 0);
+
+    // Eğer bugün ve saat geçtiyse, gelecek haftaya al
+    if (targetDate <= now) {
+        targetDate.setDate(targetDate.getDate() + 7);
+    }
+
+    return Math.floor((targetDate.getTime() - now.getTime()) / 1000);
+}
 
 export const NotificationService = {
     async requestPermissions() {
@@ -44,27 +67,50 @@ export const NotificationService = {
                         notifyHour += 24;
                     }
 
-                    // Haftalık tekrarlayan bildirim kur
-                    // item.day: 0: Pazar, 1: Pazartesi...
-                    // Expo Notifications'ta weekday 1 (Pazar) - 7 (Cumartesi) arasındadır.
-                    // Bizim sistemimizde 0: Pazar, 1: Pazartesi -> Expo weekday = item.day + 1
-                    const triggerDay = item.day + 1;
+                    try {
+                        // Android için: Belirli bir tarihe kadar saniye cinsinden bekle
+                        // iOS için: Calendar trigger kullan
+                        if (Platform.OS === 'android') {
+                            const seconds = getSecondsUntilNextOccurrence(item.day, notifyHour, notifyMinute);
 
-                    await Notifications.scheduleNotificationAsync({
-                        content: {
-                            title: t('notifications.lessonTitle') || 'Ders Başlıyor!',
-                            body: `${student.fullName} - ${item.time} (${t('notifications.lessonBodyReminder') || '15 dakika kaldı'})`,
-                            data: { studentId: student.id },
-                            sound: true,
-                        },
-                        trigger: {
-                            type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
-                            weekday: triggerDay,
-                            hour: notifyHour,
-                            minute: notifyMinute,
-                            repeats: true,
-                        } as any, // Use any to bypass version-specific type issues if any, though it should follow CalendarTriggerInput
-                    });
+                            if (seconds > 0) {
+                                await Notifications.scheduleNotificationAsync({
+                                    content: {
+                                        title: t('notifications.lessonTitle') || 'Ders Başlıyor!',
+                                        body: `${student.fullName} - ${item.time} (${t('notifications.lessonBodyReminder') || '15 dakika kaldı'})`,
+                                        data: { studentId: student.id },
+                                        sound: true,
+                                    },
+                                    trigger: {
+                                        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+                                        seconds: seconds,
+                                        repeats: false, // Android'de tekrarlamalı time interval desteklenmiyor, tek seferlik olacak
+                                    },
+                                });
+                            }
+                        } else {
+                            // iOS için Calendar trigger
+                            const triggerDay = item.day === 0 ? 1 : item.day + 1; // iOS weekday: 1=Pazar
+                            await Notifications.scheduleNotificationAsync({
+                                content: {
+                                    title: t('notifications.lessonTitle') || 'Ders Başlıyor!',
+                                    body: `${student.fullName} - ${item.time} (${t('notifications.lessonBodyReminder') || '15 dakika kaldı'})`,
+                                    data: { studentId: student.id },
+                                    sound: true,
+                                },
+                                trigger: {
+                                    type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+                                    weekday: triggerDay,
+                                    hour: notifyHour,
+                                    minute: notifyMinute,
+                                    repeats: true,
+                                } as any,
+                            });
+                        }
+                    } catch (error) {
+                        // Bildirim zamanlanamadıysa sessizce devam et
+                        console.warn('Bildirim zamanlanamadı:', error);
+                    }
                 }
             }
         }

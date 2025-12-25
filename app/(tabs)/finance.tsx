@@ -2,7 +2,8 @@ import { useRouter } from 'expo-router';
 import { BookOpen, Calendar, Crown, Download, Lock, TrendingUp, Users } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { LineChart } from 'react-native-chart-kit';
 import { Colors, FilterColors } from '../../src/constants/Colors';
 import { useData } from '../../src/context/DataContext';
 import { useSubscription } from '../../src/context/SubscriptionContext';
@@ -116,6 +117,30 @@ export default function FinanceScreen() {
         return Math.round(avg);
     }, [payments]);
 
+    // Monthly income trend for last 6 months (for chart)
+    const monthlyTrend = useMemo(() => {
+        const months: { label: string; value: number }[] = [];
+        const now = new Date();
+        const monthNames = settings.language === 'tr'
+            ? ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara']
+            : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+        for (let i = 5; i >= 0; i--) {
+            const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
+            const monthPayments = payments.filter(p => {
+                const d = new Date(p.date);
+                return d >= monthStart && d <= monthEnd;
+            });
+            const total = monthPayments.reduce((sum, p) => sum + p.amount, 0);
+            months.push({
+                label: monthNames[monthStart.getMonth()],
+                value: total
+            });
+        }
+        return months;
+    }, [payments, settings.language]);
+
     const formatCurrency = (amount: number) => {
         const symbol = settings.currency || '₺';
         return `${symbol}${Math.round(amount).toLocaleString('tr-TR')}`;
@@ -216,6 +241,46 @@ export default function FinanceScreen() {
                         <Text style={styles.statSmallValue}>{formatCurrency(avgFee)}</Text>
                         <Text style={styles.statSmallLabel}>{t('finance.avgFee')}</Text>
                     </View>
+                </View>
+
+                {/* Income Trend Chart */}
+                <View style={styles.chartCard}>
+                    <Text style={styles.chartTitle}>{t('finance.incomeTrend') || 'Gelir Trendi'}</Text>
+                    <LineChart
+                        data={{
+                            labels: monthlyTrend.map(m => m.label),
+                            datasets: [{
+                                data: monthlyTrend.map(m => m.value || 0),
+                                color: (opacity = 1) => `rgba(16, 112, 99, ${opacity})`,
+                                strokeWidth: 2
+                            }]
+                        }}
+                        width={Dimensions.get('window').width - 64}
+                        height={160}
+                        chartConfig={{
+                            backgroundColor: Colors.card,
+                            backgroundGradientFrom: Colors.card,
+                            backgroundGradientTo: Colors.card,
+                            decimalPlaces: 0,
+                            color: (opacity = 1) => `rgba(16, 112, 99, ${opacity})`,
+                            labelColor: () => Colors.textSecondary,
+                            style: { borderRadius: 12 },
+                            propsForDots: {
+                                r: '4',
+                                strokeWidth: '2',
+                                stroke: themeColor
+                            },
+                            propsForLabels: {
+                                fontSize: 10
+                            }
+                        }}
+                        bezier
+                        style={{ borderRadius: 12, marginTop: 8 }}
+                        withInnerLines={false}
+                        withOuterLines={false}
+                        withVerticalLabels={true}
+                        withHorizontalLabels={true}
+                    />
                 </View>
 
                 {/* Recent Payments (FREE) */}
@@ -558,5 +623,25 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
         color: '#FFF',
+    },
+    chartCard: {
+        backgroundColor: Colors.card,
+        borderRadius: 20,
+        marginHorizontal: 16,
+        marginBottom: 24,
+        padding: 16,
+        shadowColor: Colors.shadowColor,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 12,
+        elevation: 2,
+        alignItems: 'center',
+    },
+    chartTitle: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: Colors.text,
+        alignSelf: 'flex-start',
+        marginBottom: 4,
     },
 });

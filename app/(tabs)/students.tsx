@@ -16,12 +16,14 @@ import {
 } from 'react-native';
 import { Colors, TagColors } from '../../src/constants/Colors';
 import { useData } from '../../src/context/DataContext';
+import { useTerminology } from '../../src/hooks/useTerminology';
 import { Student } from '../../src/types';
 
 type TabType = 'individuals' | 'groups';
 
 export default function StudentsScreen() {
   const { t } = useTranslation();
+  const terms = useTerminology();
   const router = useRouter();
   const { students, groups, settings } = useData();
   const [activeTab, setActiveTab] = useState<TabType>('individuals');
@@ -94,7 +96,7 @@ export default function StudentsScreen() {
             />
           </View>
         ) : (
-          <Text style={styles.headerTitle}>{t('students.title')}</Text>
+          <Text style={styles.headerTitle}>{terms.student} {t('students.list')}</Text>
         )}
 
         <TouchableOpacity
@@ -134,7 +136,7 @@ export default function StudentsScreen() {
         {activeTab === 'individuals' ? (
           filteredStudents.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>{t('students.noStudents')}</Text>
+              <Text style={styles.emptyText}>{t('students.noYet', { term: terms.student.toLowerCase() })}</Text>
             </View>
           ) : (
             filteredStudents.map((student) => (
@@ -152,7 +154,7 @@ export default function StudentsScreen() {
         ) : (
           filteredGroups.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>{t('groups.noGroups')}</Text>
+              <Text style={styles.emptyText}>{t('students.noGroups')}</Text>
             </View>
           ) : (
             filteredGroups.map((group) => (
@@ -168,7 +170,7 @@ export default function StudentsScreen() {
                   <View>
                     <Text style={styles.groupName}>{group.name}</Text>
                     <Text style={styles.groupSubtext}>
-                      {group.studentIds.length} {t('students.title')}
+                      {group.studentIds.length} {terms.student}
                     </Text>
                   </View>
                 </View>

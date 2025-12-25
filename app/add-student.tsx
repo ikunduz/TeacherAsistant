@@ -6,12 +6,15 @@ import { useTranslation } from 'react-i18next';
 import { Alert, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Colors, TagColors } from '../src/constants/Colors';
 import { useData } from '../src/context/DataContext';
+import { PREMIUM_LIMITS, useSubscription } from '../src/context/SubscriptionContext';
+import { useTerminology } from '../src/hooks/useTerminology';
 import { sanitizeNumber, sanitizePhone, sanitizeText } from '../src/utils/validation';
 
 export default function AddStudentScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { addStudent, teacher, settings } = useData();
+  const terms = useTerminology();
+  const { students, addStudent, teacher, settings } = useData();
 
   const [fullName, setFullName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -71,7 +74,13 @@ export default function AddStudentScreen() {
     }
   };
 
+  const { isPro } = useSubscription();
+
   const handleSave = async () => {
+    if (!isPro && students.length >= PREMIUM_LIMITS.FREE_STUDENT_LIMIT) {
+      router.push('/paywall' as any);
+      return;
+    }
     if (!fullName || !grade || !lessonFee) {
       Alert.alert(t('common.error'), t('common.noData'));
       return;
@@ -118,7 +127,7 @@ export default function AddStudentScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ChevronLeft size={24} color={Colors.iosBlue} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('students.addStudent')}</Text>
+        <Text style={styles.headerTitle}>{terms.addStudent}</Text>
         <TouchableOpacity onPress={handleSave} style={styles.saveHeaderButton}>
           <Text style={[styles.saveHeaderText, { color: themeColor }]}>{t('common.save')}</Text>
         </TouchableOpacity>

@@ -58,7 +58,7 @@
         "deleteGroupConfirmTitle": "Delete Group",
         "deleteGroupConfirmMessage": "Are you sure you want to delete \"{{name}}\"? Group members will not be deleted.",
         "noStudents": "No individual students yet.",
-        "noGroups": "No groups created yet.",
+        "noGroups": "You haven't created any groups yet.",
         "noResults": "No results found.",
         "swipeMessage": "Share via WhatsApp",
         "swipePay": "Quick Pay",
@@ -68,6 +68,10 @@
         "businessLogo": "Business Logo",
         "businessColor": "Brand Color",
         "remainingLessons": "Remaining Lessons",
+        "hasPackage": "Has Package",
+        "noPackage": "No Package",
+        "list": "List",
+        "noYet": "No {{term}} yet.",
         "addPackage": "Add Package",
         "packageCount": "Lesson Count",
         "packagePrice": "Total Price",
@@ -143,7 +147,8 @@
         "forecast": "Next Month Forecast",
         "exportReport": "Export Report",
         "premiumFeature": "Premium Feature",
-        "unlockCharts": "Unlock Charts"
+        "unlockCharts": "Unlock Charts",
+        "incomeTrend": "Income Trend (Last 6 Months)"
     },
     "profile": {
         "title": "Profile",
@@ -158,6 +163,11 @@
         "backupRestoreTitle": "Backup & Restore",
         "backup": "Export Data",
         "restore": "Import Data",
+        "backupSuccess": "Data exported successfully.",
+        "backupError": "Error during export.",
+        "restoreSuccess": "Data restored successfully!",
+        "restoreError": "Invalid backup file.",
+        "selectBackupFile": "Select backup file",
         "instructionCategory": "Instruction Category",
         "resetData": "Reset All Data",
         "resetDataDesc": "This will delete all your data. This action cannot be undone.",
@@ -204,7 +214,7 @@
         "individualSession": "Individual Session",
         "selectGroup": "Select Group",
         "selectStudent": "Select Student",
-        "noGroups": "No groups yet.",
+        "noGroups": "You haven't created any groups yet.",
         "noStudents": "No students yet.",
         "noSelection": "Please select at least one student.",
         "attendanceFees": "Attendance & Fees",
@@ -246,6 +256,7 @@
         "cloudBackup": "Cloud Backup",
         "monthly": "Monthly",
         "yearly": "Yearly",
+        "lifetime": "Lifetime",
         "bestValue": "Best Value",
         "savePercent": "Save {{percent}}%",
         "startTrial": "Start Free Trial",
@@ -271,7 +282,9 @@
             "q6": "How to change theme color?",
             "a6": "Go to \"Profile\" tab. Select a color in \"Brand Color\" and press \"Save\".",
             "q7": "How to backup data?",
-            "a7": "In \"Profile\", press \"Export Data\". Save the file. Use \"Import Data\" to load it back."
+            "a7": "In 'Profile', press 'Export Data'. Save the file. Use 'Import Data' to load it back.",
+            "q8": "How to enable lesson reminders?",
+            "a8": "In Profile, turn on 'Notifications'. You'll receive reminders 15 minutes before each lesson."
         }
     },
     "categories": {
@@ -307,5 +320,22 @@
         "shareMessage": "Hello! Here are my available hours:",
         "blockSlot": "Block This Slot",
         "unblockSlot": "Unblock This Slot"
+    },
+    "privacy": {
+        "introTitle": "Your Data is Safe",
+        "introText": "Teacher Assistant prioritizes your privacy. All your data is stored only on your device.",
+        "localStorageTitle": "Local Storage",
+        "localStorageDesc": "All your data is stored only on your device. No personal data is sent to any server.",
+        "encryptionTitle": "Secure Storage",
+        "encryptionDesc": "Sensitive data is protected in your device's secure storage area.",
+        "noTrackingTitle": "No Tracking",
+        "noTrackingDesc": "User behavior is not tracked, no analytics data is collected.",
+        "noCloudTitle": "No Cloud Backup",
+        "noCloudDesc": "Your data is not automatically backed up to the cloud. You can manually backup using the export feature.",
+        "dataControlTitle": "Data Control",
+        "dataControlDesc": "You can export or delete all your data at any time.",
+        "permissionsTitle": "Minimal Permissions",
+        "permissionsDesc": "The app only requests necessary permissions: Notifications and Gallery (for logo).",
+        "footerNote": "If you have any questions, please contact our support team."
     }
 }

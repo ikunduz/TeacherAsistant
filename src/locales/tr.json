@@ -58,7 +58,7 @@
         "deleteGroupConfirmTitle": "Grubu Sil",
         "deleteGroupConfirmMessage": "\"{{name}}\" isimli grubu silmek istediğinize emin misiniz? Grup üyeleri silinmez.",
         "noStudents": "Henüz bireysel öğrenci yok.",
-        "noGroups": "Henüz grup oluşturulmadı.",
+        "noGroups": "Henüz grup oluşturmadınız.",
         "noResults": "Sonuç bulunamadı.",
         "swipeMessage": "WhatsApp ile Bildir",
         "swipePay": "Hızlı Ödeme",
@@ -68,6 +68,10 @@
         "businessLogo": "Kurum Logosu",
         "businessColor": "Kurumsal Renk",
         "remainingLessons": "Kalan Dersler",
+        "hasPackage": "Paketli",
+        "noPackage": "Paket Yok",
+        "list": "Listesi",
+        "noYet": "Henüz {{term}} yok.",
         "addPackage": "Paket Ekle",
         "packageCount": "Ders Sayısı",
         "packagePrice": "Toplam Ücret",
@@ -143,7 +147,8 @@
         "forecast": "Gelecek Ay Tahmini",
         "exportReport": "Rapor Dışa Aktar",
         "premiumFeature": "Premium Özellik",
-        "unlockCharts": "Grafikleri Açmak İçin"
+        "unlockCharts": "Grafikleri Açmak İçin",
+        "incomeTrend": "Gelir Trendi (Son 6 Ay)"
     },
     "profile": {
         "title": "Profil",
@@ -158,6 +163,11 @@
         "backupRestoreTitle": "Yedekleme ve Geri Yükleme",
         "backup": "Veriyi Dışa Aktar",
         "restore": "Veri İçe Aktar",
+        "backupSuccess": "Veriler başarıyla dışa aktarıldı.",
+        "backupError": "Dışa aktarma sırasında hata oluştu.",
+        "restoreSuccess": "Veriler başarıyla geri yüklendi!",
+        "restoreError": "Geçersiz yedek dosyası.",
+        "selectBackupFile": "Yedek dosyası seçin",
         "instructionCategory": "Eğitim Alanı",
         "resetData": "Tüm Verileri Sıfırla",
         "resetDataDesc": "Bu işlem tüm verilerinizi silecektir. Bu işlem geri alınamaz.",
@@ -204,7 +214,7 @@
         "individualSession": "Bireysel Ders",
         "selectGroup": "Grup Seçin",
         "selectStudent": "Öğrenci Seçin",
-        "noGroups": "Henüz grup yok.",
+        "noGroups": "Henüz grup oluşturmadınız.",
         "noStudents": "Henüz öğrenci yok.",
         "noSelection": "Lütfen en az bir öğrenci seçin.",
         "attendanceFees": "Yoklama ve Ücretler",
@@ -246,6 +256,7 @@
         "cloudBackup": "Bulut Yedekleme",
         "monthly": "Aylık",
         "yearly": "Yıllık",
+        "lifetime": "Ömür Boyu",
         "bestValue": "En Avantajlı",
         "savePercent": "%{{percent}} tasarruf",
         "startTrial": "Ücretsiz Denemeyi Başlat",
@@ -269,7 +280,11 @@
             "q5": "Öğrenci Gelişimini Nasıl Takip Ederim?",
             "a5": "Öğrenci detayındaki 'Gelişim Metrikleri' alanından yıldızlı veya sayısal kriterler ekleyerek (örn: Kelime Bilgisi, Telaffuz) her ders sonrası puanlama yapabilir, gelişimi grafiklerle görebilirsiniz.",
             "q6": "PDF Raporu Nasıl Oluşturulur?",
-            "a6": "Öğrenci sayfasındaki 'PDF Raporu Oluştur' butonu ile tüm ders geçmişini, ödemeleri ve gelişim grafiklerini içeren kurumsal logolu bir raporu saniyeler içinde hazırlayıp paylaşabilirsiniz."
+            "a6": "Öğrenci sayfasındaki 'PDF Raporu Oluştur' butonu ile tüm ders geçmişini, ödemeleri ve gelişim grafiklerini içeren kurumsal logolu bir raporu saniyeler içinde hazırlayıp paylaşabilirsiniz.",
+            "q7": "Verilerimi Nasıl Yedeklerim?",
+            "a7": "Profil sayfasında 'Veriyi Dışa Aktar' butonuna basın. Dosyayı Google Drive, e-posta veya başka bir yere kaydedin. Geri yüklemek için 'Veri İçe Aktar' butonunu kullanın.",
+            "q8": "Ders Bildirimleri Nasıl Açılır?",
+            "a8": "Profil sayfasında 'Bildirimler' seçeneğini açın. Bundan sonra dersleriniz başlamadan 15 dakika önce hatırlatma alacaksınız."
         }
     },
     "categories": {
@@ -305,5 +320,22 @@
         "shareMessage": "Merhaba! Haftalık müsait olduğum saatler:",
         "blockSlot": "Bu Saati Kapat",
         "unblockSlot": "Bu Saati Aç"
+    },
+    "privacy": {
+        "introTitle": "Verileriniz Güvende",
+        "introText": "Öğretmen Yardımcısı, gizliliğinizi ön planda tutar. Tüm verileriniz yalnızca cihazınızda saklanır.",
+        "localStorageTitle": "Yerel Depolama",
+        "localStorageDesc": "Tüm verileriniz yalnızca cihazınızda saklanır. Sunucuya hiçbir kişisel veri gönderilmez.",
+        "encryptionTitle": "Güvenli Depolama",
+        "encryptionDesc": "Hassas veriler cihazınızın güvenli depolama alanında korunur.",
+        "noTrackingTitle": "İzleme Yok",
+        "noTrackingDesc": "Kullanıcı davranışları izlenmez, analitik verileri toplanmaz.",
+        "noCloudTitle": "Bulut Yedekleme Yok",
+        "noCloudDesc": "Verileriniz otomatik olarak buluta yedeklenmez. Dışa aktarma özelliğiyle manuel yedek alabilirsiniz.",
+        "dataControlTitle": "Veri Kontrolü",
+        "dataControlDesc": "Tüm verilerinizi istediğiniz zaman dışa aktarabilir veya silebilirsiniz.",
+        "permissionsTitle": "Minimum İzinler",
+        "permissionsDesc": "Uygulama sadece gerekli izinleri ister: Bildirimler ve Galeri (logo için).",
+        "footerNote": "Herhangi bir sorunuz varsa destek ekibimizle iletişime geçebilirsiniz."
     }
 }

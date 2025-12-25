@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors, TagColors } from '../../src/constants/Colors';
 import { useData } from '../../src/context/DataContext';
-import { useSubscription } from '../../src/context/SubscriptionContext';
+import { PREMIUM_LIMITS, useSubscription } from '../../src/context/SubscriptionContext';
 
 export default function DashboardScreen() {
   const { t } = useTranslation();
@@ -102,9 +102,9 @@ export default function DashboardScreen() {
   const themeColor = teacher?.themeColor || Colors.primary;
 
   const handleNavigation = (route: string) => {
-    if (route === '/add-student' && !isPro && students.length >= 5) {
+    if (route === '/add-student' && !isPro && students.length >= PREMIUM_LIMITS.FREE_STUDENT_LIMIT) {
       router.push('/paywall' as any);
-    } else if (route === '/add-group' && !isPro && groups.length >= 2) {
+    } else if (route === '/add-group' && !isPro && groups.length >= PREMIUM_LIMITS.FREE_GROUP_LIMIT) {
       router.push('/paywall' as any);
     } else {
       router.push(route as any);

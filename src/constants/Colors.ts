@@ -39,6 +39,9 @@ export const Colors = {
   cyan: '#06B6D4',
   cyanLight: '#CFFAFE',
 
+  pink: '#EC4899',
+  pinkLight: '#FCE7F3',
+
   // Border colors
   border: '#E5E7EB',
   borderLight: '#F3F4F6',

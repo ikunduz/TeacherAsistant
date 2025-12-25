@@ -45,7 +45,7 @@ export default function HelpScreen() {
     const { teacher } = useData();
 
     const themeColor = teacher?.themeColor || Colors.primary;
-    const faqKeys = ['q1', 'q2', 'q3', 'q4', 'q5', 'q6'];
+    const faqKeys = ['q1', 'q2', 'q3', 'q4', 'q5', 'q6', 'q7', 'q8'];
 
     return (
         <View style={styles.container}>

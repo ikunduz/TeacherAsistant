@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Alert, Dimensions, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../../src/constants/Colors';
 import { useData } from '../../src/context/DataContext';
+import { useTerminology } from '../../src/hooks/useTerminology';
 
 // 08:00 - 23:00 (15 saat) + Header ve Footer için yer hesabı
 const START_HOUR = 8;
@@ -44,6 +45,7 @@ interface LessonSlot {
 export default function ScheduleScreen() {
     const { t, i18n } = useTranslation();
     const router = useRouter();
+    const terms = useTerminology();
     const { students, settings, teacher, updateSettings } = useData();
     const [blockedSlots, setBlockedSlots] = useState<BlockedSlot[]>(settings.blockedSlots || []);
 
@@ -215,7 +217,7 @@ export default function ScheduleScreen() {
                 <View style={styles.legend}>
                     <View style={styles.legendItem}>
                         <View style={[styles.legendDot, { backgroundColor: themeColor }]} />
-                        <Text style={styles.legendText}>{t('schedule.lesson')}</Text>
+                        <Text style={styles.legendText}>{terms.lesson}</Text>
                     </View>
                     <View style={styles.legendItem}>
                         <View style={[styles.legendDot, { backgroundColor: Colors.errorLight }]} />

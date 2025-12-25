@@ -3,6 +3,7 @@ import * as Localization from 'expo-localization';
 import { useRouter } from 'expo-router';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { getCategoryConfig } from '../constants/Categories';
 import i18n from '../i18n/config';
 import { NotificationService } from '../services/notifications';
 import { StorageService } from '../services/storage';
@@ -127,7 +128,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const setTeacher = async (v: Teacher) => { await StorageService.saveTeacher(v); setTeacherState(v); };
 
   const addStudent = async (v: Student) => {
-    const studentWithMetrics = { ...v, metrics: v.metrics || [] };
+    // Seed default metrics if none provided
+    let initialMetrics = v.metrics || [];
+    if (initialMetrics.length === 0) {
+      const config = getCategoryConfig(settings.instructionCategory || 'academic');
+      initialMetrics = config.defaultMetrics.map((m, i) => ({
+        id: Date.now().toString() + '-' + i,
+        name: m.name,
+        type: m.type,
+        values: []
+      }));
+    }
+
+    const studentWithMetrics = { ...v, metrics: initialMetrics };
     const n = [...students, studentWithMetrics];
     await StorageService.saveStudents(n);
     setStudents(n);

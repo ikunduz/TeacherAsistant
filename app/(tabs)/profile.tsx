@@ -1,5 +1,8 @@
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
+import * as Sharing from 'expo-sharing';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -92,6 +95,87 @@ export default function ProfileScreen() {
     });
     if (!result.canceled) {
       setBusinessLogo(result.assets[0].uri);
+    }
+  };
+
+  const handleExportData = async () => {
+    try {
+      const [teacherData, studentsData, lessonsData, paymentsData, groupsData, settingsData] = await Promise.all([
+        StorageService.getTeacher(),
+        StorageService.getStudents(),
+        StorageService.getLessons(),
+        StorageService.getPayments(),
+        StorageService.getGroups(),
+        StorageService.getSettings(),
+      ]);
+
+      const backupData = {
+        version: 1,
+        exportDate: new Date().toISOString(),
+        teacher: teacherData,
+        students: studentsData,
+        lessons: lessonsData,
+        payments: paymentsData,
+        groups: groupsData,
+        settings: settingsData,
+      };
+
+      const fileName = `coachpro_backup_${new Date().toISOString().split('T')[0]}.json`;
+      const filePath = `${FileSystem.cacheDirectory}${fileName}`;
+
+      await FileSystem.writeAsStringAsync(filePath, JSON.stringify(backupData, null, 2));
+
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(filePath);
+      } else {
+        Alert.alert(t('common.success'), t('profile.backupSuccess'));
+      }
+    } catch (error) {
+      Alert.alert(t('common.error'), t('profile.backupError'));
+    }
+  };
+
+  const handleImportData = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'application/json',
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled) return;
+
+      const fileUri = result.assets[0].uri;
+      const content = await FileSystem.readAsStringAsync(fileUri);
+      const backupData = JSON.parse(content);
+
+      if (!backupData.version || !backupData.students) {
+        Alert.alert(t('common.error'), t('profile.restoreError'));
+        return;
+      }
+
+      Alert.alert(
+        t('profile.restore'),
+        t('profile.restoreConfirm') || 'Bu işlem mevcut verilerinizin üzerine yazacaktır. Devam etmek istiyor musunuz?',
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+          {
+            text: t('common.add'),
+            onPress: async () => {
+              if (backupData.teacher) await StorageService.saveTeacher(backupData.teacher);
+              if (backupData.students) await StorageService.saveStudents(backupData.students);
+              if (backupData.lessons) await StorageService.saveLessons(backupData.lessons);
+              if (backupData.payments) await StorageService.savePayments(backupData.payments);
+              if (backupData.groups) await StorageService.saveGroups(backupData.groups);
+              if (backupData.settings) await StorageService.saveSettings(backupData.settings);
+
+              await refreshData();
+              Alert.alert(t('common.success'), t('profile.restoreSuccess'));
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      Alert.alert(t('common.error'), t('profile.restoreError'));
     }
   };
 
@@ -335,7 +419,7 @@ export default function ProfileScreen() {
           {/* Privacy & Security */}
           <TouchableOpacity
             style={styles.listItem}
-            onPress={() => Alert.alert(t('profile.privacy'), t('common.noData'))}
+            onPress={() => router.push('/privacy' as any)}
           >
             <Text style={styles.listItemText}>{t('profile.privacy')}</Text>
             <ChevronRight size={20} color={Colors.iosSeparator} />
@@ -347,6 +431,20 @@ export default function ProfileScreen() {
             onPress={() => router.push('/help')}
           >
             <Text style={styles.listItemText}>{t('profile.help')}</Text>
+            <ChevronRight size={20} color={Colors.iosSeparator} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Backup & Restore Section */}
+        <Text style={styles.sectionHeader}>{t('profile.backupRestoreTitle').toUpperCase()}</Text>
+        <View style={styles.card}>
+          <TouchableOpacity style={styles.listItem} onPress={handleExportData}>
+            <Text style={styles.listItemText}>{t('profile.backup')}</Text>
+            <ChevronRight size={20} color={Colors.iosSeparator} />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.listItem} onPress={handleImportData}>
+            <Text style={styles.listItemText}>{t('profile.restore')}</Text>
             <ChevronRight size={20} color={Colors.iosSeparator} />
           </TouchableOpacity>
         </View>

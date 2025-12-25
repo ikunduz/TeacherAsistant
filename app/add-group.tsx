@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../src/constants/Colors';
 import { useData } from '../src/context/DataContext';
+import { PREMIUM_LIMITS, useSubscription } from '../src/context/SubscriptionContext';
 import { sanitizeText } from '../src/utils/validation';
 
 export default function AddGroupScreen() {
@@ -40,7 +41,13 @@ export default function AddGroupScreen() {
     }
   };
 
+  const { isPro } = useSubscription();
+
   const handleSave = async () => {
+    if (!isPro && groups.length >= PREMIUM_LIMITS.FREE_GROUP_LIMIT) {
+      router.push('/paywall' as any);
+      return;
+    }
     if (!name.trim()) {
       Alert.alert(t('common.error'), t('students.addGroup'));
       return;

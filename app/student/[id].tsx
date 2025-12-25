@@ -6,12 +6,14 @@ import { Alert, Image, Linking, Modal, ScrollView, StyleSheet, Text, TextInput, 
 import { Colors, TagColors } from '../../src/constants/Colors';
 import { useData } from '../../src/context/DataContext';
 import { useSubscription } from '../../src/context/SubscriptionContext';
+import { useTerminology } from '../../src/hooks/useTerminology';
 import { ReportService } from '../../src/services/report';
 import { generateReportMessage } from '../../src/utils/messageGenerator';
 
 export default function StudentDetailScreen() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
+  const terms = useTerminology();
   const { id } = useLocalSearchParams();
   const { students, lessons, payments, addPayment, addPackage, teacher, settings, updateStudent, addMetric, updateMetricScore, updateEvaluationNote, deleteMetric } = useData();
   const { isPro } = useSubscription();
@@ -220,7 +222,7 @@ export default function StudentDetailScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ChevronLeft size={24} color={Colors.iosBlue} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('students.title')}</Text>
+        <Text style={styles.headerTitle}>{student.fullName}</Text>
         <TouchableOpacity onPress={() => router.push(`/edit-student/${student.id}`)} style={[styles.editButton, { backgroundColor: themeColor }]}>
           <Edit size={18} color="#FFF" />
         </TouchableOpacity>
@@ -313,11 +315,11 @@ export default function StudentDetailScreen() {
                 </Text>
                 {student.remainingLessons > 0 ? (
                   <View style={{ backgroundColor: Colors.success + '20', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12 }}>
-                    <Text style={{ fontSize: 11, color: Colors.success, fontWeight: '600' }}>🎫 Paketli</Text>
+                    <Text style={{ fontSize: 11, color: Colors.success, fontWeight: '600' }}>🎫 {t('students.hasPackage')}</Text>
                   </View>
                 ) : (
                   <View style={{ backgroundColor: Colors.warning + '20', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12 }}>
-                    <Text style={{ fontSize: 11, color: Colors.warning, fontWeight: '600' }}>⚠️ Paket Yok</Text>
+                    <Text style={{ fontSize: 11, color: Colors.warning, fontWeight: '600' }}>⚠️ {t('students.noPackage')}</Text>
                   </View>
                 )}
               </View>

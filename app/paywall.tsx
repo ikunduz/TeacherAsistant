@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { CheckCircle2, Crown, ShieldCheck, X } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Dimensions, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../src/constants/Colors';
 import { useSubscription } from '../src/context/SubscriptionContext';
 
@@ -14,25 +14,40 @@ export default function PaywallScreen() {
     const router = useRouter();
     const { packages, purchasePackage, restorePurchases, isPro, loading } = useSubscription();
     const [purchasing, setPurchasing] = useState(false);
-    const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('yearly');
+    const [selectedPlan, setSelectedPlan] = useState<'lifetime' | 'yearly'>('lifetime');
 
     const benefits = [
         { icon: <CheckCircle2 size={22} color="#10B981" />, text: t('paywall.unlimitedStudents') },
         { icon: <CheckCircle2 size={22} color="#10B981" />, text: t('paywall.proReports') },
         { icon: <CheckCircle2 size={22} color="#10B981" />, text: t('paywall.advancedAnalytics') },
         { icon: <CheckCircle2 size={22} color="#10B981" />, text: t('paywall.packageSystem') },
-        { icon: <CheckCircle2 size={22} color="#10B981" />, text: t('paywall.cloudBackup') },
+        { icon: <CheckCircle2 size={22} color="#10B981" />, text: t('profile.backupRestoreTitle') },
     ];
 
-    const handlePurchase = async () => {
-        if (!packages) return;
+    const getPackagePrice = (type: string) => {
+        if (!packages) return '---';
+        const pkg = packages.find(p => p.packageType === type);
+        return pkg?.product.priceString || '---';
+    };
 
-        // Find the relevant package based on selection
-        const pkg = packages.find((p: any) =>
-            selectedPlan === 'yearly' ? p.packageType === 'ANNUAL' : p.packageType === 'MONTHLY'
+    const handlePurchase = async () => {
+        if (!packages) {
+            Alert.alert(t('common.error'), "Pricing not loaded");
+            return;
+        }
+
+        const pkg = packages.find(p =>
+            selectedPlan === 'yearly' ? p.packageType === 'ANNUAL' : p.packageType === 'LIFETIME'
         );
 
         if (!pkg) {
+            // Fallback for testing with sandbox if IDs don't match perfectly
+            const firstAvailable = packages[0];
+            if (firstAvailable) {
+                const success = await purchasePackage(firstAvailable);
+                if (success) router.back();
+                return;
+            }
             Alert.alert(t('common.error'), "No package found");
             return;
         }
@@ -88,27 +103,26 @@ export default function PaywallScreen() {
 
                 <View style={styles.plansContainer}>
                     <TouchableOpacity
-                        style={[styles.planCard, selectedPlan === 'monthly' && styles.selectedPlan]}
-                        onPress={() => setSelectedPlan('monthly')}
+                        style={[styles.planCard, selectedPlan === 'lifetime' && styles.selectedPlan]}
+                        onPress={() => setSelectedPlan('lifetime')}
                     >
-                        <View style={styles.planInfo}>
-                            <Text style={styles.planName}>{t('paywall.monthly')}</Text>
-                            <Text style={styles.planPrice}>₺89.99 / мес</Text>
+                        <View style={styles.bestValueBadge}>
+                            <Text style={styles.bestValueText}>{t('paywall.bestValue')}</Text>
                         </View>
-                        <View style={[styles.radio, selectedPlan === 'monthly' && styles.radioActive]} />
+                        <View style={styles.planInfo}>
+                            <Text style={styles.planName}>{t('paywall.lifetime')}</Text>
+                            <Text style={styles.planPrice}>{getPackagePrice('LIFETIME')}</Text>
+                        </View>
+                        <View style={[styles.radio, selectedPlan === 'lifetime' && styles.radioActive]} />
                     </TouchableOpacity>
 
                     <TouchableOpacity
                         style={[styles.planCard, selectedPlan === 'yearly' && styles.selectedPlan]}
                         onPress={() => setSelectedPlan('yearly')}
                     >
-                        <View style={styles.bestValueBadge}>
-                            <Text style={styles.bestValueText}>{t('paywall.bestValue')}</Text>
-                        </View>
                         <View style={styles.planInfo}>
                             <Text style={styles.planName}>{t('paywall.yearly')}</Text>
-                            <Text style={styles.planPrice}>₺699.99 / год</Text>
-                            <Text style={styles.saveText}>{t('paywall.savePercent', { percent: 35 })}</Text>
+                            <Text style={styles.planPrice}>{getPackagePrice('ANNUAL')}</Text>
                         </View>
                         <View style={[styles.radio, selectedPlan === 'yearly' && styles.radioActive]} />
                     </TouchableOpacity>
@@ -136,9 +150,13 @@ export default function PaywallScreen() {
                 </View>
 
                 <View style={styles.legalLinks}>
-                    <Text style={styles.legalText}>{t('paywall.terms')}</Text>
+                    <TouchableOpacity onPress={() => Linking.openURL('https://coachpro-app.github.io/terms')}>
+                        <Text style={styles.legalText}>{t('paywall.terms')}</Text>
+                    </TouchableOpacity>
                     <View style={styles.legalDot} />
-                    <Text style={styles.legalText}>{t('paywall.privacy')}</Text>
+                    <TouchableOpacity onPress={() => Linking.openURL('https://coachpro-app.github.io/privacy')}>
+                        <Text style={styles.legalText}>{t('paywall.privacy')}</Text>
+                    </TouchableOpacity>
                 </View>
             </ScrollView>
         </View>
