@@ -38,7 +38,7 @@ export interface Student {
   createdAt: string;
   schedule?: ScheduleItem[];
   image?: string | null;
-  statusTag?: 'Beginner' | 'Intermediate' | 'Advanced' | 'On Hold';
+  statusTag?: 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert';
   remainingLessons: number;
   metrics: Metric[];
   evaluationNote?: string;

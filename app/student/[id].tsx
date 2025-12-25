@@ -210,7 +210,7 @@ export default function StudentDetailScreen() {
     'Beginner': TagColors.beginner,
     'Intermediate': TagColors.intermediate,
     'Advanced': TagColors.advanced,
-    'On Hold': { bg: Colors.warningLight, text: '#92400E' },
+    'Expert': { bg: Colors.warningLight, text: '#92400E' },
   };
 
   return (

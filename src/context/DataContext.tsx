@@ -2,7 +2,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Localization from 'expo-localization';
 import { useRouter } from 'expo-router';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import i18n from '../i18n/config';
+import { NotificationService } from '../services/notifications';
 import { StorageService } from '../services/storage';
 import { AttendanceItem, AvailabilitySlot, Group, Lesson, Metric, MetricValue, Payment, Student, Teacher } from '../types';
 
@@ -25,6 +27,8 @@ interface AppSettings {
   taxRate: number;
   defaultMeetingLink: string;
   availability: AvailabilitySlot[];
+  blockedSlots?: { day: number; hour: number }[];
+  notificationsEnabled: boolean;
 }
 
 interface DataContextType {
@@ -70,9 +74,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
     language: 'en',
     taxRate: 0,
     defaultMeetingLink: '',
-    availability: []
+    availability: [],
+    notificationsEnabled: false
   });
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
+
+  // Bildirimleri zamanlama mantığı
+  useEffect(() => {
+    if (!loading && settings.notificationsEnabled) {
+      NotificationService.scheduleLessonNotifications(students, t);
+    } else if (!loading && !settings.notificationsEnabled) {
+      NotificationService.cancelAllNotifications();
+    }
+  }, [students, settings.notificationsEnabled, loading]);
 
   const loadData = async () => {
     try {
@@ -200,20 +215,24 @@ export function DataProvider({ children }: { children: ReactNode }) {
     // 2. remainingLessons artır
     const updatedStudent = {
       ...s,
-      remainingLessons: s.remainingLessons + count,
+      remainingLessons: (s.remainingLessons || 0) + count,
       balance: 0  // Paket peşin ödendiği için bakiye sıfırlanır
     };
     await updateStudent(updatedStudent);
 
+    // Save payment record without altering balance
     if (totalAmount > 0) {
-      await addPayment({
+      const newPayment = {
         id: Date.now().toString(),
         studentId,
         studentName: s.fullName,
         amount: totalAmount,
         date: new Date().toISOString(),
         paymentMethod: paymentMethod as any || 'Other',
-      });
+      };
+      const np = [...payments, newPayment];
+      await StorageService.savePayments(np);
+      setPayments(np);
     }
   };
 

@@ -23,7 +23,7 @@ export default function EditStudentScreen() {
   const [lessonFee, setLessonFee] = useState('');
   const [gender, setGender] = useState<'Erkek' | 'Kız'>('Erkek');
   const [image, setImage] = useState<string | null>(null);
-  const [statusTag, setStatusTag] = useState<'Beginner' | 'Intermediate' | 'Advanced' | 'On Hold'>('Beginner');
+  const [statusTag, setStatusTag] = useState<'Beginner' | 'Intermediate' | 'Advanced' | 'Expert'>('Beginner');
 
   const themeColor = teacher?.themeColor || Colors.primary;
 
@@ -106,7 +106,7 @@ export default function EditStudentScreen() {
     'Beginner': TagColors.beginner,
     'Intermediate': TagColors.intermediate,
     'Advanced': TagColors.advanced,
-    'On Hold': { bg: Colors.warningLight, text: '#92400E' },
+    'Expert': { bg: Colors.warningLight, text: '#92400E' },
   };
 
   return (
@@ -215,7 +215,7 @@ export default function EditStudentScreen() {
           <Text style={styles.sectionHeader}>{t('students.level').toUpperCase()}</Text>
           <View style={styles.card}>
             <View style={styles.tagSelector}>
-              {(['Beginner', 'Intermediate', 'Advanced', 'On Hold'] as const).map((tag) => {
+              {(['Beginner', 'Intermediate', 'Advanced', 'Expert'] as const).map((tag) => {
                 const isSelected = statusTag === tag;
                 const colors = statusColors[tag];
                 return (
@@ -411,8 +411,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   tagBtn: {
+    width: '48%',
     paddingVertical: 10,
-    paddingHorizontal: 16,
+    alignItems: 'center',
     borderRadius: 20,
     borderWidth: 1,
     borderColor: Colors.border,

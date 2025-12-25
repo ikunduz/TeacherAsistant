@@ -50,7 +50,7 @@
         "beginner": "Beginner",
         "intermediate": "Intermediate",
         "advanced": "Advanced",
-        "onHold": "On Hold",
+        "expert": "Expert",
         "selectPhoto": "Gallery",
         "takePhoto": "Camera",
         "deleteConfirmTitle": "Delete Student",
@@ -286,7 +286,26 @@
         "sportsDesc": "Swimming, Basketball, Tennis...",
         "artsDesc": "Painting, Photography, Dance...",
         "fitnessDesc": "Yoga, Personal Training...",
-        "professionalDesc": "Coding, Marketing, Design..."
+        "professionalDesc": "Coding, Marketing, Design...",
+        "notificationPermissionDenied": "Notification permission denied."
     },
-    "weekly-schedule": "Lesson History"
+    "notifications": {
+        "lessonTitle": "Lesson Starting ⏳",
+        "lessonBodyReminder": "Starts in 15 minutes"
+    },
+    "weekly-schedule": "Lesson History",
+    "schedule": {
+        "title": "Schedule",
+        "weeklyView": "Weekly View",
+        "blocked": "Blocked",
+        "available": "Available",
+        "lesson": "Lesson",
+        "addBlock": "Add Block",
+        "removeBlock": "Remove Block",
+        "shareAvailable": "Share Available Times",
+        "noAvailableSlots": "No available slots to share",
+        "shareMessage": "Hello! Here are my available hours:",
+        "blockSlot": "Block This Slot",
+        "unblockSlot": "Unblock This Slot"
+    }
 }

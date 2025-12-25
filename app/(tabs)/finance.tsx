@@ -1,8 +1,8 @@
 import { useRouter } from 'expo-router';
-import { ArrowUpRight, BookOpen, Calendar, Crown, Download, Lock, PieChart, TrendingUp, Users } from 'lucide-react-native';
+import { BookOpen, Calendar, Crown, Download, Lock, TrendingUp, Users } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors, FilterColors } from '../../src/constants/Colors';
 import { useData } from '../../src/context/DataContext';
 import { useSubscription } from '../../src/context/SubscriptionContext';
@@ -56,23 +56,12 @@ export default function FinanceScreen() {
         return { startDate: start, previousStartDate: prevStart, previousEndDate: prevEnd };
     }, [activeFilter]);
 
-    // Calculate income based on filter
-    const { grossIncome, netIncome, percentChange } = useMemo(() => {
+    // Calculate net income directly (no tax, no gross)
+    const { netIncome } = useMemo(() => {
         const currentPayments = payments.filter(p => new Date(p.date) >= startDate);
-        const gross = currentPayments.reduce((sum, p) => sum + p.amount, 0);
-
-        const taxRate = settings.taxRate || 0;
-        const net = gross * (1 - taxRate / 100);
-
-        const previousPayments = payments.filter(p => {
-            const date = new Date(p.date);
-            return date >= previousStartDate && date <= previousEndDate;
-        });
-        const previousGross = previousPayments.reduce((sum, p) => sum + p.amount, 0);
-        const change = previousGross > 0 ? ((gross - previousGross) / previousGross) * 100 : 0;
-
-        return { grossIncome: gross, netIncome: net, percentChange: change };
-    }, [payments, startDate, previousStartDate, previousEndDate, settings.taxRate]);
+        const net = currentPayments.reduce((sum, p) => sum + p.amount, 0);
+        return { netIncome: net };
+    }, [payments, startDate]);
 
     // Total lessons in period (FREE)
     const totalLessons = useMemo(() => {
@@ -152,7 +141,7 @@ export default function FinanceScreen() {
         // Yeni PDF rapor servisi kullan
         const { ReportService } = await import('../../src/services/report');
         await ReportService.generateFinanceReport(
-            grossIncome,
+            netIncome,
             netIncome,
             totalLessons,
             avgFee,
@@ -172,7 +161,11 @@ export default function FinanceScreen() {
                 {/* Header */}
                 <View style={styles.header}>
                     <View style={styles.brandRow}>
-                        <PieChart size={24} color={Colors.textSecondary} />
+                        <Image
+                            source={require('../../assets/images/icon.png')}
+                            style={styles.logo}
+                            resizeMode="contain"
+                        />
                         <Text style={styles.brandText}>CoachPro</Text>
                     </View>
                     <Text style={styles.pageTitle}>{t('finance.title')}</Text>
@@ -204,20 +197,9 @@ export default function FinanceScreen() {
                 {/* Stats Cards Row 1 - Gross & Net */}
                 <View style={styles.statsRow}>
                     <View style={styles.statCard}>
-                        <Text style={styles.statLabel}>{t('finance.grossIncome')}</Text>
-                        <Text style={styles.statValue}>{formatCurrency(grossIncome)}</Text>
-                        <View style={[styles.changeBadge, { backgroundColor: percentChange >= 0 ? Colors.successLight : Colors.errorLight }]}>
-                            <ArrowUpRight size={12} color={percentChange >= 0 ? Colors.successDark : Colors.error} style={percentChange < 0 ? { transform: [{ rotate: '90deg' }] } : {}} />
-                            <Text style={[styles.changeText, { color: percentChange >= 0 ? Colors.successDark : Colors.error }]}>
-                                {Math.abs(percentChange).toFixed(1)}%
-                            </Text>
-                        </View>
-                    </View>
-
-                    <View style={styles.statCard}>
                         <Text style={styles.statLabel}>{t('finance.netIncome')}</Text>
                         <Text style={styles.statValue}>{formatCurrency(netIncome)}</Text>
-                        <Text style={styles.taxNote}>({t('finance.afterTax')})</Text>
+
                     </View>
                 </View>
 
@@ -340,8 +322,13 @@ const styles = StyleSheet.create({
     brandRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
+        gap: 12,
         marginBottom: 8,
+    },
+    logo: {
+        width: 32,
+        height: 32,
+        borderRadius: 8,
     },
     brandText: {
         fontSize: 20,

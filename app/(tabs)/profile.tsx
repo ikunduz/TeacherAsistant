@@ -17,6 +17,7 @@ import {
 import { Colors, ThemePresets } from '../../src/constants/Colors';
 import { useData } from '../../src/context/DataContext';
 import i18n from '../../src/i18n/config';
+import { NotificationService } from '../../src/services/notifications';
 import { StorageService } from '../../src/services/storage';
 
 const currencies = [
@@ -313,8 +314,19 @@ export default function ProfileScreen() {
           <View style={styles.listItem}>
             <Text style={styles.listItemText}>{t('profile.notifications')}</Text>
             <Switch
-              value={notifications}
-              onValueChange={setNotifications}
+              value={settings.notificationsEnabled}
+              onValueChange={async (value) => {
+                if (value) {
+                  const granted = await NotificationService.requestPermissions();
+                  if (granted) {
+                    await updateSettings({ notificationsEnabled: true });
+                  } else {
+                    Alert.alert(t('common.error'), t('profile.notificationPermissionDenied') || 'Bildirim izni verilmedi.');
+                  }
+                } else {
+                  await updateSettings({ notificationsEnabled: false });
+                }
+              }}
               trackColor={{ false: '#E9E9EA', true: Colors.iosGreen }}
               thumbColor="#FFF"
             />

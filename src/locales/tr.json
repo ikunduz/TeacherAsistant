@@ -50,7 +50,7 @@
         "beginner": "Başlangıç",
         "intermediate": "Orta",
         "advanced": "İleri",
-        "onHold": "Beklemede",
+        "expert": "Uzman",
         "selectPhoto": "Galeri",
         "takePhoto": "Kamera",
         "deleteConfirmTitle": "Öğrenciyi Sil",
@@ -284,7 +284,26 @@
         "sportsDesc": "Yüzme, Basketbol, Tenis...",
         "artsDesc": "Resim, Fotoğrafçılık, Dans...",
         "fitnessDesc": "Yoga, Pilates, Özel Ders...",
-        "professionalDesc": "Yazılım, Tasarım, Pazarlama..."
+        "professionalDesc": "Yazılım, Tasarım, Pazarlama...",
+        "notificationPermissionDenied": "Bildirim izni verilmedi."
     },
-    "weekly-schedule": "Ders Geçmişi"
+    "notifications": {
+        "lessonTitle": "Ders Başlıyor ⏳",
+        "lessonBodyReminder": "15 dakika içinde başlayacak"
+    },
+    "weekly-schedule": "Ders Geçmişi",
+    "schedule": {
+        "title": "Takvim",
+        "weeklyView": "Haftalık Görünüm",
+        "blocked": "Meşgul",
+        "available": "Müsait",
+        "lesson": "Ders",
+        "addBlock": "Blok Ekle",
+        "removeBlock": "Bloku Kaldır",
+        "shareAvailable": "Müsait Zamanları Paylaş",
+        "noAvailableSlots": "Paylaşılacak müsait zaman yok",
+        "shareMessage": "Merhaba! Haftalık müsait olduğum saatler:",
+        "blockSlot": "Bu Saati Kapat",
+        "unblockSlot": "Bu Saati Aç"
+    }
 }
