@@ -148,7 +148,8 @@
         "exportReport": "Export Report",
         "premiumFeature": "Premium Feature",
         "unlockCharts": "Unlock Charts",
-        "incomeTrend": "Income Trend (Last 6 Months)"
+        "incomeTrend": "Income Trend (Last 6 Months)",
+        "monthlyReport": "Monthly Income"
     },
     "profile": {
         "title": "Profile",
@@ -170,8 +171,8 @@
         "selectBackupFile": "Select backup file",
         "instructionCategory": "Instruction Category",
         "resetData": "Reset All Data",
-        "resetDataDesc": "This will delete all your data. This action cannot be undone.",
-        "dataCleared": "All data has been cleared.",
+        "resetDataDesc": "ALL DATA WILL BE DELETED! This will permanently delete all students, lessons, and settings. This action cannot be undone.",
+        "dataCleared": "All data has been cleared and app reset.",
         "teacherInfo": "Teacher Info",
         "branding": "Branding",
         "uploadLogo": "Upload Logo",
@@ -182,8 +183,6 @@
         "notifications": "Notifications",
         "privacy": "Privacy & Security",
         "help": "Help & Support",
-        "signOut": "Sign Out",
-        "signOutDesc": "Are you sure you want to sign out?",
         "colors": {
             "default": "Default",
             "rose": "Rose",
@@ -337,5 +336,79 @@
         "permissionsTitle": "Minimal Permissions",
         "permissionsDesc": "The app only requests necessary permissions: Notifications and Gallery (for logo).",
         "footerNote": "If you have any questions, please contact our support team."
+    },
+    "terminology": {
+        "academic": {
+            "student": "Student",
+            "lesson": "Lesson",
+            "homework": "Homework",
+            "attendance": "Attendance",
+            "addStudent": "Add New Student",
+            "metrics": {
+                "metric1": "Homework Tracking",
+                "metric2": "Exam Success",
+                "metric3": "Class Participation"
+            }
+        },
+        "music": {
+            "student": "Student",
+            "lesson": "Lesson / Rehearsal",
+            "homework": "Exercise",
+            "attendance": "Attendance",
+            "addStudent": "Add New Student",
+            "metrics": {
+                "metric1": "Rhythm Sense",
+                "metric2": "Sheet Music Reading",
+                "metric3": "Technique"
+            }
+        },
+        "sports": {
+            "student": "Athlete",
+            "lesson": "Training",
+            "homework": "Program",
+            "attendance": "Attendance",
+            "addStudent": "Add New Athlete",
+            "metrics": {
+                "metric1": "Technical Capacity",
+                "metric2": "Endurance",
+                "metric3": "Game Intelligence"
+            }
+        },
+        "arts": {
+            "student": "Trainee",
+            "lesson": "Workshop",
+            "homework": "Project",
+            "attendance": "Attendance",
+            "addStudent": "Add New Trainee",
+            "metrics": {
+                "metric1": "Creativity",
+                "metric2": "Technical Skill",
+                "metric3": "Project Progress"
+            }
+        },
+        "fitness": {
+            "student": "Client",
+            "lesson": "Session",
+            "homework": "Goal",
+            "attendance": "Status",
+            "addStudent": "Add New Client",
+            "metrics": {
+                "metric1": "Motivation",
+                "metric2": "Nutrition Compliance",
+                "metric3": "Weight Tracking"
+            }
+        },
+        "professional": {
+            "student": "Client",
+            "lesson": "Meeting",
+            "homework": "Task",
+            "attendance": "Status",
+            "addStudent": "Add New Client",
+            "metrics": {
+                "metric1": "Action Plan",
+                "metric2": "Goal Achievement",
+                "metric3": "Meeting Efficiency"
+            }
+        }
     }
 }

@@ -83,6 +83,7 @@ export const ThemePresets = [
   { key: 'orange', color: '#F97316' },
   { key: 'cyan', color: '#06B6D4' },
   { key: 'pink', color: '#EC4899' },
+  { key: 'slate', color: '#64748B' },
 ];
 
 export default Colors;

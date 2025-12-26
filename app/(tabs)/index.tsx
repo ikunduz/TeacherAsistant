@@ -1,8 +1,9 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Calendar, Check, Plus, Users } from 'lucide-react-native';
-import React, { useMemo } from 'react';
+import { ArrowRight, Calendar, Check, Plus, Users } from 'lucide-react-native';
+import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Image, NativeScrollEvent, NativeSyntheticEvent, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors, TagColors } from '../../src/constants/Colors';
 import { useData } from '../../src/context/DataContext';
 import { PREMIUM_LIMITS, useSubscription } from '../../src/context/SubscriptionContext';
@@ -21,6 +22,37 @@ export default function DashboardScreen() {
   const pendingStudentsCount = useMemo(() => {
     return students.filter(s => s.balance > 0).length;
   }, [students]);
+
+  // Calculate this month's income
+  const thisMonthIncome = useMemo(() => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    return payments.reduce((sum, p) => {
+      const pDate = new Date(p.date);
+      if (pDate.getMonth() === currentMonth && pDate.getFullYear() === currentYear) {
+        return sum + p.amount;
+      }
+      return sum;
+    }, 0);
+  }, [payments]);
+
+  // Carousel State
+  const [activeSlide, setActiveSlide] = useState(0);
+  const screenWidth = Dimensions.get('window').width;
+  // Subtract padding (24 * 2 = 48) to get card width matching valid space if we want full width, 
+  // but usually we want it to fit within the padding. 
+  // Inspecting styles: scrollContent has paddingHorizontal: 24.
+  // The ScrollView for pages should probably take full width of container minus padding?
+  // Or better, let's keep the ScrollView inside the padding.
+
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const slideSize = event.nativeEvent.layoutMeasurement.width;
+    const index = event.nativeEvent.contentOffset.x / slideSize;
+    const roundIndex = Math.round(index);
+    setActiveSlide(roundIndex);
+  };
 
   // Today's completed lessons
   const todaysCompletedLessons = useMemo(() => {
@@ -159,29 +191,101 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Hero Card - Pending Payment */}
-        <View style={styles.heroCard}>
-          {/* Decorative blurs */}
-          <View style={styles.heroDecorLeft} />
-          <View style={styles.heroDecorRight} />
-          <View style={styles.heroDecorTop} />
+        {/* Hero Carousel */}
+        <View style={{ height: 160, marginBottom: 8 }}>
+          <ScrollView
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+            decelerationRate="fast"
+            contentContainerStyle={{ paddingRight: 0 }}
+          >
+            {/* Slide 1: Pending Payment */}
+            <View style={{ width: screenWidth - 48, marginRight: 0 }}>
+              <TouchableOpacity
+                activeOpacity={0.9}
+                onPress={() => router.push('/(tabs)/finance' as any)}
+              >
+                <LinearGradient
+                  colors={[themeColor, themeColor]}
+                  style={styles.heroCard}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <View style={[styles.patternCircle, { top: -20, right: -20, width: 150, height: 150 }]} />
+                  <View style={[styles.patternCircle, { bottom: -40, left: -20, width: 200, height: 200 }]} />
 
-          <View style={styles.heroContent}>
-            <Text style={styles.heroLabel}>{t('dashboard.pendingPayment')}</Text>
-            <Text style={styles.heroAmount}>
-              {settings.currency}
-              {Math.round(pendingAmount).toLocaleString('tr-TR')}
-            </Text>
-            <Text style={styles.heroSubtext}>
-              {t('dashboard.pendingPayments')} ({pendingStudentsCount} {t('students.title')})
-            </Text>
-          </View>
+                  <View style={styles.heroContentLeft}>
+                    <View style={styles.heroTextContainer}>
+                      <Text style={styles.heroLabel}>{t('dashboard.pendingPayment')}</Text>
+                      <View style={styles.amountRow}>
+                        <Text style={styles.heroCurrency}>{settings.currency}</Text>
+                        <Text style={styles.heroAmount}>
+                          {Math.round(pendingAmount).toLocaleString('tr-TR')}
+                        </Text>
+                      </View>
+                      <Text style={styles.heroSubtext}>
+                        {pendingStudentsCount} {t('students.title').toLowerCase()} • {t('dashboard.pendingPayments').toLowerCase()}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.heroArrow}>
+                    <View style={styles.iconContainer}>
+                      <ArrowRight size={20} color={themeColor} />
+                    </View>
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+
+            {/* Slide 2: Monthly Income */}
+            <View style={{ width: screenWidth - 48 }}>
+              <TouchableOpacity
+                activeOpacity={0.9}
+                onPress={() => router.push('/(tabs)/finance' as any)}
+              >
+                <LinearGradient
+                  colors={[Colors.success, Colors.success]}
+                  style={styles.heroCard}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <View style={[styles.patternCircle, { top: -20, right: -20, width: 150, height: 150 }]} />
+                  <View style={[styles.patternCircle, { bottom: -40, left: -20, width: 200, height: 200 }]} />
+
+                  <View style={styles.heroContentLeft}>
+                    <View style={styles.heroTextContainer}>
+                      <Text style={styles.heroLabel}>{t('finance.monthlyReport') || 'Aylık Gelir'}</Text>
+                      <View style={styles.amountRow}>
+                        <Text style={styles.heroCurrency}>{settings.currency}</Text>
+                        <Text style={styles.heroAmount}>
+                          {Math.round(thisMonthIncome).toLocaleString('tr-TR')}
+                        </Text>
+                      </View>
+                      <Text style={styles.heroSubtext}>
+                        {new Date().toLocaleString(settings.language === 'tr' ? 'tr-TR' : 'en-US', { month: 'long', year: 'numeric' })}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.heroArrow}>
+                    <View style={styles.iconContainer}>
+                      <ArrowRight size={20} color={Colors.success} />
+                    </View>
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
         </View>
 
         {/* Pagination Dots */}
         <View style={styles.paginationDots}>
-          <View style={[styles.dot, styles.dotActive]} />
-          <View style={styles.dot} />
+          <View style={[styles.dot, activeSlide === 0 && styles.dotActive]} />
+          <View style={[styles.dot, activeSlide === 1 && styles.dotActive]} />
         </View>
 
         {/* Action Buttons */}
@@ -350,6 +454,7 @@ export default function DashboardScreen() {
   );
 }
 
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -359,8 +464,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 60,
   },
-
-  // Header
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -419,74 +522,77 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
   },
-
-  // Hero Card
   heroCard: {
-    backgroundColor: Colors.card,
     borderRadius: 24,
     padding: 24,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     overflow: 'hidden',
     shadowColor: Colors.shadowColor,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 20,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+    minHeight: 140,
   },
-  heroDecorLeft: {
+  patternCircle: {
     position: 'absolute',
-    top: -30,
-    left: -30,
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    backgroundColor: 'rgba(16, 185, 129, 0.08)',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 999,
   },
-  heroDecorRight: {
-    position: 'absolute',
-    bottom: -30,
-    right: -30,
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: 'rgba(244, 63, 94, 0.06)',
+  heroContentLeft: {
+    flex: 1,
+    zIndex: 1,
   },
-  heroDecorTop: {
-    position: 'absolute',
-    top: 20,
-    right: 40,
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: 'rgba(59, 130, 246, 0.06)',
-  },
-  heroContent: {
-    alignItems: 'center',
-    zIndex: 10,
+  heroTextContainer: {
+    gap: 4,
   },
   heroLabel: {
-    fontSize: 14,
-    color: Colors.textSecondary,
+    fontSize: 15,
+    color: 'rgba(255, 255, 255, 0.9)',
     fontWeight: '500',
-    marginBottom: 8,
+    letterSpacing: 0.5,
   },
-  heroAmount: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: Colors.text,
-    marginBottom: 4,
+  amountRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 4,
   },
   heroCurrency: {
-    fontSize: 18,
-    fontWeight: '500',
-    color: Colors.textMuted,
+    fontSize: 24,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.9)',
+  },
+  heroAmount: {
+    fontSize: 42,
+    fontWeight: '800',
+    color: '#FFF',
+    letterSpacing: -1,
   },
   heroSubtext: {
     fontSize: 13,
-    color: Colors.textMuted,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginTop: 4,
+    fontWeight: '500',
   },
-
-  // Pagination
+  heroArrow: {
+    marginLeft: 16,
+    zIndex: 1,
+  },
+  iconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
   paginationDots: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -503,8 +609,6 @@ const styles = StyleSheet.create({
   dotActive: {
     backgroundColor: Colors.text,
   },
-
-  // Action Buttons
   actionButtonFull: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -568,8 +672,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
-
-  // Schedule Section
   scheduleSection: {
     marginBottom: 24,
   },
@@ -590,7 +692,6 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     fontStyle: 'italic',
   },
-  // Timeline - Flexbox Approach
   timeline: {
     gap: 0,
   },

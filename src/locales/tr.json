@@ -148,7 +148,8 @@
         "exportReport": "Rapor Dışa Aktar",
         "premiumFeature": "Premium Özellik",
         "unlockCharts": "Grafikleri Açmak İçin",
-        "incomeTrend": "Gelir Trendi (Son 6 Ay)"
+        "incomeTrend": "Gelir Trendi (Son 6 Ay)",
+        "monthlyReport": "Aylık Gelir"
     },
     "profile": {
         "title": "Profil",
@@ -170,8 +171,8 @@
         "selectBackupFile": "Yedek dosyası seçin",
         "instructionCategory": "Eğitim Alanı",
         "resetData": "Tüm Verileri Sıfırla",
-        "resetDataDesc": "Bu işlem tüm verilerinizi silecektir. Bu işlem geri alınamaz.",
-        "dataCleared": "Tüm veriler silindi.",
+        "resetDataDesc": "TÜM VERİLERİNİZ SİLİNECEK! Bu işlem tüm öğrenci, ders ve ayarları kalıcı olarak siler ve geri alınamaz.",
+        "dataCleared": "Tüm veriler başarıyla silindi ve uygulama sıfırlandı.",
         "teacherInfo": "Öğretmen Bilgileri",
         "branding": "Kurumsal Kimlik",
         "uploadLogo": "Logo Yükle",
@@ -182,8 +183,6 @@
         "notifications": "Bildirimler",
         "privacy": "Gizlilik ve Güvenlik",
         "help": "Yardım ve Destek",
-        "signOut": "Çıkış Yap",
-        "signOutDesc": "Çıkış yapmak istediğinize emin misiniz?",
         "colors": {
             "default": "Varsayılan",
             "rose": "Gül",
@@ -337,5 +336,79 @@
         "permissionsTitle": "Minimum İzinler",
         "permissionsDesc": "Uygulama sadece gerekli izinleri ister: Bildirimler ve Galeri (logo için).",
         "footerNote": "Herhangi bir sorunuz varsa destek ekibimizle iletişime geçebilirsiniz."
+    },
+    "terminology": {
+        "academic": {
+            "student": "Öğrenci",
+            "lesson": "Ders",
+            "homework": "Ödev",
+            "attendance": "Yoklama",
+            "addStudent": "Yeni Öğrenci Ekle",
+            "metrics": {
+                "metric1": "Ödev Takibi",
+                "metric2": "Sınav Başarısı",
+                "metric3": "Derse Katılım"
+            }
+        },
+        "music": {
+            "student": "Öğrenci",
+            "lesson": "Ders / Prova",
+            "homework": "Egzersiz",
+            "attendance": "Katılım",
+            "addStudent": "Yeni Öğrenci Ekle",
+            "metrics": {
+                "metric1": "Ritim Duygusu",
+                "metric2": "Nota Okuma",
+                "metric3": "Teknik"
+            }
+        },
+        "sports": {
+            "student": "Sporcu",
+            "lesson": "Antrenman",
+            "homework": "Program",
+            "attendance": "Devam",
+            "addStudent": "Yeni Sporcu Ekle",
+            "metrics": {
+                "metric1": "Teknik Kapasite",
+                "metric2": "Dayanıklılık",
+                "metric3": "Oyun Zekası"
+            }
+        },
+        "arts": {
+            "student": "Kursiyer",
+            "lesson": "Atölye",
+            "homework": "Proje",
+            "attendance": "Katılım",
+            "addStudent": "Yeni Kursiyer Ekle",
+            "metrics": {
+                "metric1": "Yaratıcılık",
+                "metric2": "Teknik Beceri",
+                "metric3": "Proje İlerlemesi"
+            }
+        },
+        "fitness": {
+            "student": "Danışan",
+            "lesson": "Seans",
+            "homework": "Hedef",
+            "attendance": "Durum",
+            "addStudent": "Yeni Danışan Ekle",
+            "metrics": {
+                "metric1": "Motivasyon",
+                "metric2": "Beslenme Uyumu",
+                "metric3": "Kilo Takibi"
+            }
+        },
+        "professional": {
+            "student": "Danışan",
+            "lesson": "Görüşme",
+            "homework": "Görev",
+            "attendance": "Durum",
+            "addStudent": "Yeni Danışan Ekle",
+            "metrics": {
+                "metric1": "Aksiyon Planı",
+                "metric2": "Hedef Tutturma",
+                "metric3": "Toplantı Verimi"
+            }
+        }
     }
 }

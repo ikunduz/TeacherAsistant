@@ -49,6 +49,7 @@ export default function ProfileScreen() {
   const [selectedCurrency, setSelectedCurrency] = useState('USD');
   const [selectedLanguage, setSelectedLanguage] = useState('en');
   const [notifications, setNotifications] = useState(false);
+  const [isColorPickerExpanded, setIsColorPickerExpanded] = useState(false);
 
   useEffect(() => {
     // Sadece başlangıçta veya teacher/settings yüklendiğinde bir kez doldur
@@ -202,20 +203,7 @@ export default function ProfileScreen() {
     );
   };
 
-  const handleSignOut = () => {
-    Alert.alert(
-      t('profile.signOut'),
-      t('profile.signOutDesc'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('profile.signOut'),
-          style: 'destructive',
-          onPress: handleResetData,
-        },
-      ]
-    );
-  };
+
 
   return (
     <View style={styles.container}>
@@ -298,22 +286,42 @@ export default function ProfileScreen() {
           </TouchableOpacity>
 
           {/* Select Brand Color */}
-          <View style={styles.listItem}>
+          <TouchableOpacity
+            style={styles.listItem}
+            onPress={() => setIsColorPickerExpanded(!isColorPickerExpanded)}
+          >
             <Text style={styles.listItemText}>{t('profile.selectColor')}</Text>
-            <View style={styles.colorSwatches}>
-              {ThemePresets.slice(0, 4).map((preset) => (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View style={[styles.colorSwatch, { backgroundColor: selectedColor }]} />
+              <ChevronRight
+                size={20}
+                color={Colors.iosSeparator}
+                style={{ transform: [{ rotate: isColorPickerExpanded ? '90deg' : '0deg' }] }}
+              />
+            </View>
+          </TouchableOpacity>
+
+          {isColorPickerExpanded && (
+            <View style={styles.expandedColorPicker}>
+              {ThemePresets.map((preset) => (
                 <TouchableOpacity
                   key={preset.key}
                   style={[
-                    styles.colorSwatch,
+                    styles.colorSwatchLarge,
                     { backgroundColor: preset.color },
-                    selectedColor === preset.color && styles.colorSwatchSelected,
+                    selectedColor === preset.color && styles.colorSwatchLargeSelected,
                   ]}
                   onPress={() => setSelectedColor(preset.color)}
-                />
+                >
+                  {selectedColor === preset.color && (
+                    <View style={styles.selectedCheck}>
+                      <View style={styles.checkInner} />
+                    </View>
+                  )}
+                </TouchableOpacity>
               ))}
             </View>
-          </View>
+          )}
 
           {/* Use on PDF Reports */}
           <View style={styles.listItem}>
@@ -394,6 +402,15 @@ export default function ProfileScreen() {
         {/* App Preferences Section */}
         <Text style={styles.sectionHeader}>{t('profile.preferences').toUpperCase()}</Text>
         <View style={styles.card}>
+          {/* Instruction Category */}
+          <TouchableOpacity
+            style={styles.listItem}
+            onPress={() => router.push('/onboarding/category' as any)}
+          >
+            <Text style={styles.listItemText}>{t('profile.instructionCategory')}</Text>
+            <ChevronRight size={20} color={Colors.iosSeparator} />
+          </TouchableOpacity>
+
           {/* Notifications */}
           <View style={styles.listItem}>
             <Text style={styles.listItemText}>{t('profile.notifications')}</Text>
@@ -447,12 +464,14 @@ export default function ProfileScreen() {
             <Text style={styles.listItemText}>{t('profile.restore')}</Text>
             <ChevronRight size={20} color={Colors.iosSeparator} />
           </TouchableOpacity>
+
+          <TouchableOpacity style={styles.listItem} onPress={handleResetData}>
+            <Text style={[styles.listItemText, { color: Colors.iosRed }]}>{t('profile.resetData')}</Text>
+            <ChevronRight size={20} color={Colors.iosSeparator} />
+          </TouchableOpacity>
         </View>
 
-        {/* Sign Out Button */}
-        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-          <Text style={styles.signOutText}>{t('profile.signOut')}</Text>
-        </TouchableOpacity>
+
 
         <View style={{ height: 100 }} />
       </ScrollView>
@@ -605,16 +624,57 @@ const styles = StyleSheet.create({
   // Color Swatches
   colorSwatches: {
     flexDirection: 'row',
-    gap: 8,
+    alignItems: 'center',
+    gap: 12,
   },
   colorSwatch: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
   },
   colorSwatchSelected: {
     borderWidth: 2,
     borderColor: Colors.iosBlue,
+  },
+  expandedColorPicker: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    padding: 16,
+    gap: 16,
+    backgroundColor: 'rgba(0,0,0,0.02)',
+    justifyContent: 'center',
+  },
+  colorSwatchLarge: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  colorSwatchLargeSelected: {
+    borderWidth: 3,
+    borderColor: '#FFF',
+  },
+  selectedCheck: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#FFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: Colors.iosBlue,
   },
 
   // Localization

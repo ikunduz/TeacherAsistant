@@ -134,7 +134,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const config = getCategoryConfig(settings.instructionCategory || 'academic');
       initialMetrics = config.defaultMetrics.map((m, i) => ({
         id: Date.now().toString() + '-' + i,
-        name: m.name,
+        name: t(m.name),  // Translate the metric name
         type: m.type,
         values: []
       }));
