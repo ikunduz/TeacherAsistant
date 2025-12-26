@@ -13,9 +13,9 @@ interface SubscriptionContextType {
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
 
-// API Keys - Replace with real keys from RevenueCat Dashboard
-const API_KEY_ANDROID = "goog_placeholder_api_key";
-const API_KEY_IOS = "appl_placeholder_api_key";
+// API Keys - RevenueCat Dashboard
+const API_KEY_ANDROID = "goog_NlwJuadGTZMgYLCwYVpUEmssacS";
+const API_KEY_IOS = "appl_placeholder_api_key"; // iOS key eklenecek
 
 export const PREMIUM_LIMITS = {
     FREE_STUDENT_LIMIT: 5,
@@ -34,12 +34,12 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
             try {
                 // Purchases.setLogLevel(Purchases.LOG_LEVEL.DEBUG);
 
-                if (Platform.OS === 'android' && API_KEY_ANDROID !== "goog_placeholder_api_key") {
+                if (Platform.OS === 'android' && API_KEY_ANDROID) {
                     Purchases.configure({ apiKey: API_KEY_ANDROID });
-                } else if (Platform.OS === 'ios' && API_KEY_IOS !== "appl_placeholder_api_key") {
+                } else if (Platform.OS === 'ios' && API_KEY_IOS && !API_KEY_IOS.includes('placeholder')) {
                     Purchases.configure({ apiKey: API_KEY_IOS });
-                } else {
-                    console.warn("RevenueCat: Placeholder API keys detected or platform unsupported. Skipping configuration.");
+                } else if (Platform.OS === 'ios') {
+                    console.warn("RevenueCat: iOS API key not configured yet.");
                     setLoading(false);
                     return;
                 }
